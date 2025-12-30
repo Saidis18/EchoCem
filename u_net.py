@@ -54,7 +54,6 @@ class UNet(torch.nn.Module):
         self.up_blocks = torch.nn.ModuleList([UpBlock(in_ch, out_ch) for in_ch, out_ch in dims_up])
         self.last_up = UpBlock(features[0] * 2, features[0])
         self.final_conv = torch.nn.Conv2d(features[0], out_channels, kernel_size=1)
-        self.act = torch.nn.Softmax(dim=1)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         skip, x = self.first_down(x)
@@ -71,7 +70,6 @@ class UNet(torch.nn.Module):
         
         x = self.last_up(x, skip_connections[-1])
         x = self.final_conv(x)
-        x = self.act(x)
         return x
     
     _dims_t = List[Tuple[int, int]]
@@ -82,6 +80,10 @@ class UNet(torch.nn.Module):
             dims_down.append((features[i], features[i + 1]))
         dims_up: UNet._dims_t = [(2*ft2, 2*ft1) for ft1, ft2 in reversed(dims_down)]
         return dims_down, dims_up
+    
+    @property
+    def param_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
     def epoch(
             self,
@@ -94,7 +96,6 @@ class UNet(torch.nn.Module):
         total_loss = 0.0
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
-            targets = targets.long()  # Convert to Long type for CrossEntropyLoss
             optimizer.zero_grad()
             outputs = self(inputs)
             loss = loss_fn(outputs, targets)
@@ -118,32 +119,14 @@ if __name__ == "__main__":
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=1, out_channels=3).to(device)
+    print(f"Trainable parameters: {model.param_count}")
+
 
     DATA_DIR = data.Path(__file__).parent / "data"
     X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
     Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
     dataset = data.EchoCementDataset(X_DIR, Y_CSV)
     sub = torch.utils.data.Subset(dataset, list(range(64)))  # type: ignore
-    dataloader = torch.utils.data.DataLoader(sub, batch_size=8, shuffle=True, num_workers=4)
+    dataloader = torch.utils.data.DataLoader(sub, batch_size=16, shuffle=True, num_workers=4)
 
-    from torch.profiler import profile, ProfilerActivity
-
-    with profile(
-        activities=[
-            ProfilerActivity.CPU,
-            ProfilerActivity.CUDA
-        ],
-        record_shapes=True,
-        profile_memory=True
-    ) as prof:
-
-        model.training_loop(
-            dataloader,
-            epochs=5,
-            device=device
-        )
-    
-    print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=200)) # type: ignore
-
-
-    # model.training_loop(dataloader, epochs=30, device=device)
+    model.training_loop(dataloader, epochs=5, device=device)

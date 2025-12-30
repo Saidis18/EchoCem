@@ -9,7 +9,7 @@ try:
     print("Using Polars")
 except ImportError:
     import pandas as pd
-    HAS_POLARS = False
+    HAS_POLARS = False # type: ignore
     print("Polars not found, falling back to Pandas")
 
 
@@ -34,7 +34,7 @@ class EchoCementDataset(torch.utils.data.Dataset[torch.Tensor]):
         else:
             labels = self.labels.iloc[idx] # type: ignore
         label = np.array([v for v in labels if v in [0, 1, 2]]).reshape(160, -1)[:, :160] # type: ignore
-        return torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0), torch.tensor(label, dtype=torch.float32).unsqueeze(dim=0)
+        return torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0), torch.tensor(label, dtype=torch.long)
 
 
 if __name__ == "__main__":
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     for image, label in dataloader:
         print(f"Batch image shape: {image.shape}, Batch label shape: {label.shape}")
         image = image.squeeze(0, 1)
-        label = label.squeeze(0, 1)
+        label = label.squeeze(0)
         print(f"Image shape: {image.shape}, Label shape: {label.shape}")
         f, axarr = plt.subplots(2, 1) # type: ignore
         axarr[0].imshow(image)
