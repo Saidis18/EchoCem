@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 from typing import List
 import torch
+import torch.utils.data
 
 try:
     import polars as pl
@@ -11,7 +12,6 @@ except ImportError:
     import pandas as pd
     HAS_POLARS = False # type: ignore
     print("Polars not found, falling back to Pandas")
-
 
 
 class EchoCementDataset(torch.utils.data.Dataset[torch.Tensor]):

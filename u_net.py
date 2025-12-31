@@ -1,6 +1,7 @@
 import torch
 from typing import List, Tuple
 import time
+import torch.utils.data
 
 
 class Block(torch.nn.Module):
@@ -85,13 +86,9 @@ class UNet(torch.nn.Module):
     def param_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-    def epoch(
-            self,
-            dataloader: torch.utils.data.DataLoader[torch.Tensor],
-            optimizer: torch.optim.Optimizer,
-            loss_fn: torch.nn.Module,
-            device: torch.device
-        ) -> float:
+    _dataloader_t = torch.utils.data.DataLoader[torch.Tensor]
+
+    def epoch(self, dataloader: _dataloader_t, optimizer: torch.optim.Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
         self.train()
         total_loss = 0.0
         for inputs, targets in dataloader:
@@ -103,30 +100,51 @@ class UNet(torch.nn.Module):
             optimizer.step()
             total_loss += loss.item()
         return total_loss / len(dataloader)
+
+    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
+        self.eval()
+        total_loss = 0.0
+        with torch.no_grad():
+            for inputs, targets in dataloader:
+                inputs, targets = inputs.to(device), targets.to(device)
+                outputs = self(inputs)
+                loss = loss_fn(outputs, targets)
+                total_loss += loss.item()
+        return total_loss / len(dataloader)
     
-    def training_loop(self, dataloader: torch.utils.data.DataLoader[torch.Tensor], epochs: int, device: torch.device) -> None:
+    def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         loss_fn = torch.nn.CrossEntropyLoss()
         for epoch in range(epochs):
             init_time = time.time()
-            epoch_loss = self.epoch(dataloader, optimizer, loss_fn, device)
+            train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
+            val_loss = self.validate(val_dataloader, loss_fn, device)
             end_time = time.time()
-            print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss:.4f}, Time: {end_time - init_time:.2f}s")
+            print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
 
 if __name__ == "__main__":
     import data
+    from torch.utils.data import random_split, DataLoader
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=1, out_channels=3).to(device)
     print(f"Trainable parameters: {model.param_count}")
-
+    print(f"Using device: {device}")
 
     DATA_DIR = data.Path(__file__).parent / "data"
     X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
     Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
     dataset = data.EchoCementDataset(X_DIR, Y_CSV)
-    sub = torch.utils.data.Subset(dataset, list(range(64)))  # type: ignore
-    dataloader = torch.utils.data.DataLoader(sub, batch_size=16, shuffle=True, num_workers=4)
+    dataset = torch.utils.data.Subset(dataset, list(range(64))) 
+    
+    # Split into train/validation
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    
+    # Create dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=4)
 
-    model.training_loop(dataloader, epochs=5, device=device)
+    model.training_loop(train_loader, val_loader, epochs=5, device=device)
