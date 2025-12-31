@@ -2,6 +2,7 @@ import torch
 from typing import List, Tuple
 import time
 import torch.utils.data
+from torchvision import transforms # type: ignore
 
 
 class Block(torch.nn.Module):
@@ -134,30 +135,49 @@ class UNet(torch.nn.Module):
             val_loss = self.validate(val_dataloader, loss_fn, device)
             end_time = time.time()
             print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
+    
+    def predict(self, x: torch.Tensor, device: torch.device) -> torch.Tensor:
+        self.eval()
+        original_size = x.shape[2], x.shape[3]
+        x = transforms.Resize((160, 160))(x)
+        x = x.to(device)
+        with torch.no_grad():
+            logits = self(x)
+            predictions = logits.argmax(dim=1)
+        trans_out = transforms.Resize(original_size, interpolation=transforms.InterpolationMode.NEAREST)
+        predictions = trans_out(predictions.unsqueeze(1)).squeeze(1)
+        return predictions.cpu()
 
 
 if __name__ == "__main__":
     import data
     from torch.utils.data import random_split, DataLoader
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=1, out_channels=3).to(device)
-    print(f"Trainable parameters: {model.param_count}")
-    print(f"Using device: {device}")
 
+    # Dataset
     DATA_DIR = data.Path(__file__).parent / "data"
     X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
     Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
-    dataset = data.EchoCementDataset(X_DIR, Y_CSV)
+
+    transform = transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()])
+    dataset = data.EchoCementDataset(X_DIR, Y_CSV, transform=transform)
     dataset = torch.utils.data.Subset(dataset, list(range(64))) 
     
     # Split into train/validation
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
     
-    # Create dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=4)
+    # Dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=6)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=6)
+    
+    # Model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = UNet(in_channels=1, out_channels=3).to(device)
+    print(f"Trainable parameters: {model.param_count}")
+    print(f"Using device: {device}")
 
-    model.training_loop(train_loader, val_loader, epochs=5, device=device)
+    model.training_loop(train_loader, val_loader, epochs=2, device=device)
+
+    torch.save(model.state_dict(), "runs/unet_model.pt")
