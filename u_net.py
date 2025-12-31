@@ -44,10 +44,10 @@ class UpBlock(torch.nn.Module):
         return x
 
 
-class UNet(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, features: List[int] = [64, 128, 256, 512]):
-        super(UNet, self).__init__() # type: ignore
-        dims_down, dims_up = UNet._get_dims(features)
+class UNetBase(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, features: List[int]):
+        super(UNetBase, self).__init__() # type: ignore
+        dims_down, dims_up = UNetBase._get_dims(features)
 
         self.first_down = DownBlock(in_channels, features[0])
         self.down_blocks = torch.nn.ModuleList([DownBlock(in_ch, out_ch) for in_ch, out_ch in dims_down])
@@ -76,11 +76,24 @@ class UNet(torch.nn.Module):
     _dims_t = List[Tuple[int, int]]
     @staticmethod
     def _get_dims(features: List[int]) -> Tuple[_dims_t, _dims_t]:
-        dims_down: UNet._dims_t = []
+        dims_down: UNetBase._dims_t = []
         for i in range(len(features) - 1):
             dims_down.append((features[i], features[i + 1]))
-        dims_up: UNet._dims_t = [(2*ft2, 2*ft1) for ft1, ft2 in reversed(dims_down)]
+        dims_up: UNetBase._dims_t = [(2*ft2, 2*ft1) for ft1, ft2 in reversed(dims_down)]
         return dims_down, dims_up
+
+
+class UNet(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, features: List[int] = [64, 128, 256, 512]):
+        super(UNet, self).__init__() # type: ignore
+        if torch.cuda.device_count() > 1:
+            print(f"Using {torch.cuda.device_count()} GPUs for UNet")
+            self.unet = torch.nn.DataParallel(UNetBase(in_channels, out_channels, features))
+        else:
+            self.unet = UNetBase(in_channels, out_channels, features)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.unet(x)
     
     @property
     def param_count(self) -> int:
