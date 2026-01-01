@@ -1,6 +1,6 @@
 from pathlib import Path
 import numpy as np
-from typing import List
+from typing import List, Tuple
 import torch
 import torch.utils.data
 from torchvision import transforms # type: ignore
@@ -17,7 +17,16 @@ except ImportError:
     print("Polars not found, falling back to Pandas")
 
 
-class EchoCementDataset(torch.utils.data.Dataset[torch.Tensor]):
+BaseSubset = torch.utils.data.Subset[torch.Tensor]
+class BaseDataset(torch.utils.data.Dataset[torch.Tensor]):
+    def __init__(self):
+        super().__init__()
+    
+    def __len__(self) -> int:
+        raise NotImplementedError()
+
+
+class EchoCementDataset(BaseDataset):
     def __init__(self, images_dir: Path, labels_csv: Path, transform: transforms.Compose | None = None):
         self.features_dir = images_dir
         self.transform = transform
@@ -54,6 +63,17 @@ class EchoCementDataset(torch.utils.data.Dataset[torch.Tensor]):
         return image_out, label_out # type: ignore
 
 
+def train_test_split(dataset: BaseDataset | BaseSubset, test_ratio: float) -> Tuple[BaseSubset, BaseSubset]:
+    train_ratio = 1.0 - test_ratio
+    train_size = int(train_ratio * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+
+    train_subset = torch.utils.data.Subset(dataset, train_dataset.indices)
+    val_subset = torch.utils.data.Subset(dataset, val_dataset.indices)
+    return train_subset, val_subset
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     DATA_DIR = Path(__file__).parent / "data"
@@ -61,7 +81,7 @@ if __name__ == "__main__":
     # Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = DATA_DIR / 'y_test_csv_file.csv'
+    Y_CSV = Path(__file__).parent / "runs" / 'y_test_csv_file.csv'
 
     transform = transforms.Compose([
         transforms.Resize((160, 160)),

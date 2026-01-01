@@ -85,13 +85,14 @@ class UNetBase(torch.nn.Module):
 
 
 class UNet(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, features: List[int] = [64, 128, 256, 512]):
+    def __init__(self, in_channels: int, out_channels: int, features: List[int], loss_fn: torch.nn.Module):
         super(UNet, self).__init__() # type: ignore
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs for UNet")
             self.unet = torch.nn.DataParallel(UNetBase(in_channels, out_channels, features))
         else:
             self.unet = UNetBase(in_channels, out_channels, features)
+        self.loss_fn = loss_fn
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.unet(x)
@@ -128,7 +129,7 @@ class UNet(torch.nn.Module):
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
-        loss_fn = torch.nn.CrossEntropyLoss()
+        loss_fn = self.loss_fn
         for epoch in range(epochs):
             init_time = time.time()
             train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
@@ -149,9 +150,35 @@ class UNet(torch.nn.Module):
         return predictions.cpu()
 
 
+class DiceCELoss(torch.nn.Module):
+    def __init__(self, weight_ce: float = 0.5, smooth: float = 1e-6):
+        super(DiceCELoss, self).__init__() # type: ignore
+        self.weight_ce = weight_ce
+        self.smooth = smooth
+        self.ce_loss = torch.nn.CrossEntropyLoss()
+    
+    def dice_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        
+        inputs_soft = torch.nn.functional.softmax(inputs, dim=1)
+        targets_one_hot = torch.nn.functional.one_hot(targets, num_classes=inputs.shape[1]).permute(0, 3, 1, 2).float()
+        
+        intersection = torch.sum(inputs_soft * targets_one_hot)
+        cardinality = torch.sum(inputs_soft + targets_one_hot)
+        dice = (2.0 * intersection + self.smooth) / (cardinality + self.smooth)
+        dice_loss = 1.0 - dice
+        
+        return dice_loss
+    
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce_loss = self.ce_loss(inputs, targets)
+        dice_loss = self.dice_loss(inputs, targets)
+        total_loss = self.weight_ce * ce_loss + (1.0 - self.weight_ce) * dice_loss
+        return total_loss
+
+
 if __name__ == "__main__":
     import data
-    from torch.utils.data import random_split, DataLoader
+    from torch.utils.data import DataLoader
 
     # Dataset
     DATA_DIR = data.Path(__file__).parent / "data"
@@ -162,10 +189,7 @@ if __name__ == "__main__":
     dataset = data.EchoCementDataset(X_DIR, Y_CSV, transform=transform)
     dataset = torch.utils.data.Subset(dataset, list(range(64))) 
     
-    # Split into train/validation
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    train_dataset, val_dataset = data.train_test_split(dataset, test_ratio=0.2)
     print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
     
     # Dataloaders
@@ -174,7 +198,7 @@ if __name__ == "__main__":
     
     # Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=1, out_channels=3).to(device)
+    model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256], loss_fn=DiceCELoss()).to(device)
     print(f"Trainable parameters: {model.param_count}")
     print(f"Using device: {device}")
 

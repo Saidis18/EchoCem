@@ -1,5 +1,4 @@
 # AI generated
-
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -7,7 +6,7 @@ from typing import Dict
 
 import torch
 
-from u_net import UNet
+from u_net import UNet, DiceCELoss
 
 
 def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -18,13 +17,14 @@ def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch
 
 DATA_DIR = Path(__file__).parent / "data"
 X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-MODEL_PATH = Path(__file__).parent / "unet_model.pt"
+RUNS_DIR = Path(__file__).parent / "runs"
+MODEL_PATH = RUNS_DIR / "unet_model.pt"
 
 size_labels = 272
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = UNet(in_channels=1, out_channels=3).to(device)
+model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256], loss_fn=DiceCELoss()).to(device)
 model.eval()
 
 if not MODEL_PATH.exists():
@@ -34,7 +34,7 @@ if not MODEL_PATH.exists():
 
 state = torch.load(MODEL_PATH, map_location=device)
 if isinstance(state, dict):
-    state = _strip_module_prefix(state)
+    state = _strip_module_prefix(state) # type: ignore
 model.load_state_dict(state, strict=False)
 
 
@@ -63,5 +63,5 @@ for img_path in sorted(X_TEST_DIR.glob("*.npy")):
 
     predictions["test"][name] = prediction_aux
 
-pd.DataFrame(predictions["test"], dtype="int").T.to_csv(DATA_DIR / "y_test_csv_file.csv")
-
+pd.DataFrame(predictions["test"], dtype="int").T.to_csv(RUNS_DIR / "y_test_csv_file.csv")
+print(f"Saved predictions to {RUNS_DIR / 'y_test_csv_file.csv'}")

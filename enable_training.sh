@@ -16,4 +16,5 @@ find "$OUT_DIR" -name "*.py" -print0 | xargs -0 sed -i -E '/^\s*_\w+_t = .+/d'
 find "$OUT_DIR" -name "*.py" -print0 | xargs -0 black --line-length 999 
 
 source .secrets
-timeout 5 scp -r -P $CONT_PORT "$OUT_DIR"/* $CONT_USER@$CONT_HOST:$CONT_PATH || echo "Unable to connect to container"
+
+scp -r -P $CONT_PORT "$OUT_DIR"/* $CONT_USER@$CONT_HOST:$CONT_PATH
