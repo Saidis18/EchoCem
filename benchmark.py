@@ -6,7 +6,7 @@ from typing import Dict
 
 import torch
 
-from u_net import UNet, DiceCELoss
+from u_net import Segmentation, UNet, DiceCELoss
 
 
 def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -24,7 +24,8 @@ size_labels = 272
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256], loss_fn=DiceCELoss()).to(device)
+base_model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256])
+model = Segmentation(base_model=base_model, loss_fn=DiceCELoss()).to(device)
 model.eval()
 
 if not MODEL_PATH.exists():
