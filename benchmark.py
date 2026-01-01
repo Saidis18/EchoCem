@@ -44,20 +44,17 @@ for img_path in sorted(X_TEST_DIR.glob("*.npy")):
     print(f"Processing {img_path.name}...")
     name = img_path.stem
     image = np.load(img_path)
-    x = (
-        torch.tensor(image, dtype=torch.float32)
-        .unsqueeze(0)
-        .unsqueeze(0)
-        .to(device)
-    )
 
     with torch.no_grad():
-        pred = model.predict(x, device).squeeze(0).numpy()
+        pred = model.predict(image, device).squeeze(0).numpy()
         print(f"pred shape: {pred.shape}")
 
     if pred.shape[1] != size_labels:
         prediction_aux = -1 + np.zeros(160 * size_labels)
-        prediction_aux[0 : 160 * 160] = pred.flatten()
+        pred_flat = pred.flatten()
+        num_chunks = 160
+        for i in range(num_chunks):
+            prediction_aux[i * size_labels : i * size_labels + 160] = pred_flat[i * 160 : (i + 1) * 160]
     else:
         prediction_aux = pred.flatten()
 
