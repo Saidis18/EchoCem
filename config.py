@@ -1,6 +1,7 @@
 from segmentation import DiceCELoss
-from pathlib import Path
+import data
 import torch
+import torch.utils.data # type: ignore
 from torchvision import transforms # type: ignore
 from dataclasses import dataclass
 
@@ -14,11 +15,11 @@ class Config:
     batch_size_train: int
     batch_size_val: int
 
-    DATA_DIR: Path = Path(__file__).parent / "data"
-    X_TRAIN_DIR: Path = DATA_DIR / "X_train_uDRk9z9" / "images"
-    Y_TRAIN_CSV: Path = DATA_DIR / 'Y_train_T9NrBYo.csv'
-    X_TEST_DIR: Path = DATA_DIR / "X_test_xNbnvIa" / "images"
-    RUNS_DIR: Path = Path(__file__).parent / "runs"
+    DATA_DIR: data.Path = data.Path(__file__).parent / "data"
+    X_TRAIN_DIR: data.Path = DATA_DIR / "X_train_uDRk9z9" / "images"
+    Y_TRAIN_CSV: data.Path = DATA_DIR / 'Y_train_T9NrBYo.csv'
+    X_TEST_DIR: data.Path = DATA_DIR / "X_test_xNbnvIa" / "images"
+    RUNS_DIR: data.Path = data.Path(__file__).parent / "runs"
 
 
 std_configs = [
