@@ -2,26 +2,34 @@ from loss import DiceCELoss
 from pathlib import Path
 import torch
 from torchvision import transforms # type: ignore
-from dataclasses import dataclass
 
 
 Transformation = transforms.Compose | torch.nn.Module
-@dataclass
-class Config:
-    loss_fn: torch.nn.Module
-    features: list[int]
-    trans_in: Transformation
-    trans_out: Transformation
-    epochs: int
-    batch_size_train: int
-    batch_size_val: int
 
-    DATA_DIR: Path = Path(__file__).parent / "data"
-    X_TRAIN_DIR: Path = DATA_DIR / "X_train_uDRk9z9" / "images"
-    Y_TRAIN_CSV: Path = DATA_DIR / 'Y_train_T9NrBYo.csv'
-    X_TEST_DIR: Path = DATA_DIR / "X_test_xNbnvIa" / "images"
-    RUNS_DIR: Path = Path(__file__).parent / "runs"
-
+class Config():
+    DATA_DIR = Path(__file__).parent / "data"
+    X_TRAIN_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
+    Y_TRAIN_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
+    X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
+    RUNS_DIR = Path(__file__).parent / "runs"
+    
+    def __init__(
+            self,
+            loss_fn: torch.nn.Module,
+            features: list[int],
+            trans_in: Transformation,
+            trans_out: Transformation,
+            epochs: int,
+            batch_size_train: int,
+            batch_size_val: int
+        ):
+        self.loss_fn = loss_fn
+        self.features = features
+        self.trans_in = trans_in
+        self.trans_out = trans_out
+        self.epochs = epochs
+        self.batch_size_train = batch_size_train
+        self.batch_size_val = batch_size_val
 
 std_configs = [
     Config(

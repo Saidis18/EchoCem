@@ -7,6 +7,7 @@ set -e
 SRC_DIR="${1:-.}"
 OUT_DIR="${2:-no_types}"
 
+rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 rsync -a --include='*.py' --exclude='*' "$SRC_DIR"/ "$OUT_DIR"/
 
