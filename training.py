@@ -21,7 +21,7 @@ if TESTING:
 
 
 if __name__ == "__main__":
-    dataset = data.EchoCementDataset(conf.X_TRAIN_DIR, conf.Y_TRAIN_CSV, transform=conf.trans_in)
+    dataset = data.EchoCementDataset(conf.X_TRAIN_DIR, conf.Y_TRAIN_CSV, transform=conf.transform)
     if TESTING:
         dataset = torch.utils.data.Subset(dataset, list(range(64)))
     

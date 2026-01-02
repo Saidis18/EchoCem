@@ -40,22 +40,20 @@ class Benchmark:
 
     def predict(self, image: np.ndarray) -> np.ndarray:
         with torch.no_grad():
-            pred = self.model.predict(image, self.device, self.conf.trans_in, self.conf.trans_out).squeeze(0).cpu().numpy()
+            pred = self.model.predict(image, self.device).squeeze(0).cpu().numpy()
         return pred
     
-    @staticmethod
-    def flatten(pred: np.ndarray) -> np.ndarray:
+    def flatten(self, pred: np.ndarray) -> np.ndarray:
         size_labels = 272
         if pred.shape[1] != size_labels:
-            print(f"Flattening from shape {pred.shape} to (160*{size_labels},)")
-            pred_flat = np.zeros(160 * size_labels)
-            pred_raw = pred.flatten()
+            prediction_aux = np.zeros(160 * size_labels)
+            pred_flat = pred.flatten()
             num_chunks = 160
             for i in range(num_chunks):
-                pred_flat[i * size_labels : i * size_labels + 160] = pred_raw[i * 160 : (i + 1) * 160]
+                prediction_aux[i * size_labels : i * size_labels + 160] = pred_flat[i * 160 : (i + 1) * 160]
         else:
-            pred_flat = pred.flatten()
-        return pred_flat
+            prediction_aux = pred.flatten()
+        return prediction_aux
     
     def run(self) -> None:
         predictions: Dict[str, Dict[str, np.ndarray]] = {"test": {}}
@@ -72,6 +70,6 @@ class Benchmark:
 
 
 if __name__ == "__main__":
-    RUN_NUM = 1  # Change this to select different configurations
+    RUN_NUM = 3  # Change this to select different configurations
     benchmark = Benchmark(run_num=RUN_NUM)
     benchmark.run()

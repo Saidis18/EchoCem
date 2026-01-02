@@ -1,17 +1,15 @@
-from loss import DiceCELoss
+from segmentation import DiceCELoss
 from pathlib import Path
 import torch
 from torchvision import transforms # type: ignore
 from dataclasses import dataclass
 
 
-Transformation = transforms.Compose | torch.nn.Module
 @dataclass
 class Config:
     loss_fn: torch.nn.Module
     features: list[int]
-    trans_in: Transformation
-    trans_out: Transformation
+    transform: transforms.Compose | None
     epochs: int
     batch_size_train: int
     batch_size_val: int
@@ -27,11 +25,10 @@ std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256, 512],
-        trans_in=transforms.Compose([
+        transform=transforms.Compose([
             transforms.Lambda(lambda img: img.crop((0, 0, min(img.width, 160), img.height))), # type: ignore
             transforms.ToTensor()
         ]),
-        trans_out=transforms.Pad((0, 0, 272 - 160, 0)),
         epochs=30,
         batch_size_train=128,
         batch_size_val=64
@@ -39,8 +36,7 @@ std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256],
-        trans_in=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
-        trans_out=transforms.Resize((160, 272), interpolation=transforms.InterpolationMode.NEAREST),
+        transform=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
         epochs=30,
         batch_size_train=128,
         batch_size_val=64
@@ -48,8 +44,7 @@ std_configs = [
     Config(
         loss_fn=DiceCELoss(),
         features=[64, 128, 256],
-        trans_in=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
-        trans_out=transforms.Resize((160, 272), interpolation=transforms.InterpolationMode.NEAREST),
+        transform=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
         epochs=30,
         batch_size_train=128,
         batch_size_val=64
