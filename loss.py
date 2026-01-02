@@ -9,7 +9,6 @@ class DiceCELoss(torch.nn.Module):
         self.ce_loss = torch.nn.CrossEntropyLoss()
     
     def dice_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        
         inputs_soft = torch.nn.functional.softmax(inputs, dim=1)
         targets_one_hot = torch.nn.functional.one_hot(targets, num_classes=inputs.shape[1]).permute(0, 3, 1, 2).float()
         

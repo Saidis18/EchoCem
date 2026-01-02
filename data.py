@@ -6,6 +6,7 @@ import torch.utils.data
 from torchvision import transforms # type: ignore
 from PIL import Image
 import time
+import config
 
 try:
     import polars as pl
@@ -27,7 +28,7 @@ class BaseDataset(torch.utils.data.Dataset[torch.Tensor]):
 
 
 class EchoCementDataset(BaseDataset):
-    def __init__(self, images_dir: Path, labels_csv: Path, transform: transforms.Compose | None = None):
+    def __init__(self, images_dir: Path, labels_csv: Path, transform: config.Transformation | None = None):
         self.features_dir = images_dir
         self.transform = transform
         print(f"Reading csv file from: {labels_csv}")
