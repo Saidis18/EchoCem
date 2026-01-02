@@ -2,9 +2,9 @@ import torch
 from typing import List, Tuple
 import time
 import torch.utils.data
-from torchvision import transforms # type: ignore
 from PIL import Image
 import numpy as np
+import config
 
 
 class Block(torch.nn.Module):
@@ -139,41 +139,12 @@ class Segmentation(torch.nn.Module):
             end_time = time.time()
             print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
-    def predict(self, x: np.ndarray, device: torch.device) -> torch.Tensor:
+    def predict(self, x: np.ndarray, device: torch.device, trans_in: config.Transformation, trans_out: config.Transformation) -> torch.Tensor:
         self.eval()
-        original_size = x.shape[0], x.shape[1]
-        trans_in = transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()])
-        trans_out = transforms.Resize(original_size, interpolation=transforms.InterpolationMode.NEAREST)
         x = Image.fromarray(x) # type: ignore
         x = trans_in(x).to(torch.float32).to(device).unsqueeze(0) # type: ignore
         with torch.no_grad():
             logits = self(x)
             predictions = logits.argmax(dim=1)
-        predictions = trans_out(predictions.unsqueeze(1)).squeeze(1)
-        return predictions.cpu()
-
-
-class DiceCELoss(torch.nn.Module):
-    def __init__(self, weight_ce: float = 0.5, smooth: float = 1e-6):
-        super(DiceCELoss, self).__init__() # type: ignore
-        self.weight_ce = weight_ce
-        self.smooth = smooth
-        self.ce_loss = torch.nn.CrossEntropyLoss()
-    
-    def dice_loss(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        
-        inputs_soft = torch.nn.functional.softmax(inputs, dim=1)
-        targets_one_hot = torch.nn.functional.one_hot(targets, num_classes=inputs.shape[1]).permute(0, 3, 1, 2).float()
-        
-        intersection = torch.sum(inputs_soft * targets_one_hot)
-        cardinality = torch.sum(inputs_soft + targets_one_hot)
-        dice = (2.0 * intersection + self.smooth) / (cardinality + self.smooth)
-        dice_loss = 1.0 - dice
-        
-        return dice_loss
-    
-    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        ce_loss = self.ce_loss(inputs, targets)
-        dice_loss = self.dice_loss(inputs, targets)
-        total_loss = self.weight_ce * ce_loss + (1.0 - self.weight_ce) * dice_loss
-        return total_loss
+        predictions = trans_out(predictions.unsqueeze(1)).squeeze(1) # type: ignore
+        return predictions.cpu() # type: ignore
