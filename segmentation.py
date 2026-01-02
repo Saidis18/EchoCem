@@ -177,35 +177,3 @@ class DiceCELoss(torch.nn.Module):
         dice_loss = self.dice_loss(inputs, targets)
         total_loss = self.weight_ce * ce_loss + (1.0 - self.weight_ce) * dice_loss
         return total_loss
-
-
-if __name__ == "__main__":
-    import data
-    from torch.utils.data import DataLoader
-
-    # Dataset
-    DATA_DIR = data.Path(__file__).parent / "data"
-    X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
-    Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
-
-    transform = transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()])
-    dataset = data.EchoCementDataset(X_DIR, Y_CSV, transform=transform)
-    dataset = torch.utils.data.Subset(dataset, list(range(64))) 
-    
-    train_dataset, val_dataset = data.train_test_split(dataset, test_ratio=0.2)
-    print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
-    
-    # Dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=6)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=6)
-    
-    # Model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    base_model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256])
-    model = Segmentation(base_model=base_model, loss_fn=DiceCELoss()).to(device)
-    print(f"Trainable parameters: {model.param_count}")
-    print(f"Using device: {device}")
-
-    model.training_loop(train_loader, val_loader, epochs=2, device=device)
-
-    torch.save(model.state_dict(), "runs/test_model.pt")
