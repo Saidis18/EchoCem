@@ -1,65 +1,75 @@
-# AI generated
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from typing import Dict
-
+import config
 import torch
-
-from segmentation import Segmentation, UNet, DiceCELoss
-
-
-def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-    if not any(k.startswith("module.") for k in state_dict.keys()):
-        return state_dict
-    return {k[len("module.") :]: v for k, v in state_dict.items()}
+from segmentation import Segmentation, UNet
 
 
-DATA_DIR = Path(__file__).parent / "data"
-X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-RUNS_DIR = Path(__file__).parent / "runs"
-MODEL_PATH = RUNS_DIR / "unet_model.pt"
+class Benchmark:
+    def __init__(self, run_num: int):
+        self.run_num = run_num
+        try:
+            self.conf = config.std_configs[run_num - 1]
+        except IndexError:
+            raise ValueError(f"Invalid RUN_NUM: {run_num}")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = self._get_model()
+        self._load_weights()
+    
+    @staticmethod
+    def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        if not any(k.startswith("module.") for k in state_dict.keys()):
+            return state_dict
+        return {k[len("module.") :]: v for k, v in state_dict.items()}
+    
+    def _get_model(self) -> Segmentation:
+        base_model = UNet(in_channels=1, out_channels=3, features=self.conf.features)
+        model = Segmentation(base_model=base_model, loss_fn=self.conf.loss_fn).to(self.device)
+        model.eval()
+        return model
+    
+    def _load_weights(self) -> None:
+        MODEL_PATH = self.conf.RUNS_DIR / f"unet_model_{self.run_num}.pt"
+        if not MODEL_PATH.exists():
+            raise FileNotFoundError(f"Missing model weights: {MODEL_PATH}. Train first to create unet_model_{self.run_num}.pt.")
+        state = torch.load(MODEL_PATH, map_location=self.device)
+        if isinstance(state, dict):
+            state = self._strip_module_prefix(state)  # type: ignore
+        self.model.load_state_dict(state, strict=False)
 
-size_labels = 272
+    def predict(self, image: np.ndarray) -> np.ndarray:
+        with torch.no_grad():
+            pred = self.model.predict(image, self.device).squeeze(0).cpu().numpy()
+        return pred
+    
+    def flatten(self, pred: np.ndarray) -> np.ndarray:
+        size_labels = 272
+        if pred.shape[1] != size_labels:
+            prediction_aux = np.zeros(160 * size_labels)
+            pred_flat = pred.flatten()
+            num_chunks = 160
+            for i in range(num_chunks):
+                prediction_aux[i * size_labels : i * size_labels + 160] = pred_flat[i * 160 : (i + 1) * 160]
+        else:
+            prediction_aux = pred.flatten()
+        return prediction_aux
+    
+    def run(self) -> None:
+        predictions: Dict[str, Dict[str, np.ndarray]] = {"test": {}}
+        for img_path in sorted(self.conf.X_TEST_DIR.glob("*.npy")):
+            print(f"Processing {img_path.name}")
+            name = img_path.stem
+            image = np.load(img_path)
+            pred = self.predict(image)
+            pred_flat = self.flatten(pred)
+            predictions["test"][name] = pred_flat
+        y_test_dir = self.conf.RUNS_DIR / f"y_test_{self.run_num}.csv"
+        pd.DataFrame(predictions["test"], dtype="int").T.to_csv(y_test_dir)
+        print(f"Saved predictions to {y_test_dir}")
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-base_model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256])
-model = Segmentation(base_model=base_model, loss_fn=DiceCELoss()).to(device)
-model.eval()
-
-if not MODEL_PATH.exists():
-    raise FileNotFoundError(
-        f"Missing model weights: {MODEL_PATH}. Train first to create unet_model.pt."
-    )
-
-state = torch.load(MODEL_PATH, map_location=device)
-if isinstance(state, dict):
-    state = _strip_module_prefix(state) # type: ignore
-model.load_state_dict(state, strict=False)
-
-
-predictions: Dict[str, Dict[str, np.ndarray]] = {"test": {}}
-
-for img_path in sorted(X_TEST_DIR.glob("*.npy")):
-    print(f"Processing {img_path.name}...")
-    name = img_path.stem
-    image = np.load(img_path)
-
-    with torch.no_grad():
-        pred = model.predict(image, device).squeeze(0).numpy()
-        print(f"pred shape: {pred.shape}")
-
-    if pred.shape[1] != size_labels:
-        prediction_aux = -1 + np.zeros(160 * size_labels)
-        pred_flat = pred.flatten()
-        num_chunks = 160
-        for i in range(num_chunks):
-            prediction_aux[i * size_labels : i * size_labels + 160] = pred_flat[i * 160 : (i + 1) * 160]
-    else:
-        prediction_aux = pred.flatten()
-
-    predictions["test"][name] = prediction_aux
-
-pd.DataFrame(predictions["test"], dtype="int").T.to_csv(RUNS_DIR / "y_test_csv_file.csv")
-print(f"Saved predictions to {RUNS_DIR / 'y_test_csv_file.csv'}")
+if __name__ == "__main__":
+    RUN_NUM = 3  # Change this to select different configurations
+    benchmark = Benchmark(run_num=RUN_NUM)
+    benchmark.run()
