@@ -6,7 +6,7 @@ from typing import Dict
 
 import torch
 
-from u_net import Segmentation, UNet, DiceCELoss
+from segmentation import Segmentation, UNet, DiceCELoss
 
 
 def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
