@@ -1,4 +1,4 @@
-from u_net import Segmentation, UNet, DiceCELoss
+from u_net import UNet, DiceCELoss
 import data
 import torch
 import torch.utils.data # type: ignore
@@ -61,8 +61,7 @@ if __name__ == "__main__":
     
     # Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    base_model = UNet(in_channels=1, out_channels=3, features=features)
-    model = Segmentation(base_model=base_model, loss_fn=loss).to(device)
+    model = UNet(in_channels=1, out_channels=3, features=features, loss_fn=loss).to(device)
     print(f"Trainable parameters: {model.param_count}")
     print(f"Using device: {device}")
 

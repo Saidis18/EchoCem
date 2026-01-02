@@ -47,10 +47,10 @@ class UpBlock(torch.nn.Module):
         return x
 
 
-class UNet(torch.nn.Module):
+class UNetBase(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, features: List[int]):
-        super(UNet, self).__init__() # type: ignore
-        dims_down, dims_up = UNet._get_dims(features)
+        super(UNetBase, self).__init__() # type: ignore
+        dims_down, dims_up = UNetBase._get_dims(features)
 
         self.first_down = DownBlock(in_channels, features[0])
         self.down_blocks = torch.nn.ModuleList([DownBlock(in_ch, out_ch) for in_ch, out_ch in dims_down])
@@ -79,25 +79,25 @@ class UNet(torch.nn.Module):
     _dims_t = List[Tuple[int, int]]
     @staticmethod
     def _get_dims(features: List[int]) -> Tuple[_dims_t, _dims_t]:
-        dims_down: UNet._dims_t = []
+        dims_down: UNetBase._dims_t = []
         for i in range(len(features) - 1):
             dims_down.append((features[i], features[i + 1]))
-        dims_up: UNet._dims_t = [(2*ft2, 2*ft1) for ft1, ft2 in reversed(dims_down)]
+        dims_up: UNetBase._dims_t = [(2*ft2, 2*ft1) for ft1, ft2 in reversed(dims_down)]
         return dims_down, dims_up
 
 
-class Segmentation(torch.nn.Module):
-    def __init__(self, base_model: torch.nn.Module, loss_fn: torch.nn.Module):
-        super(Segmentation, self).__init__() # type: ignore
+class UNet(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, features: List[int], loss_fn: torch.nn.Module):
+        super(UNet, self).__init__() # type: ignore
         if torch.cuda.device_count() > 1:
-            print(f"Using {torch.cuda.device_count()} GPUs for segmentation")
-            self.base_model = torch.nn.DataParallel(base_model)
+            print(f"Using {torch.cuda.device_count()} GPUs for UNet")
+            self.unet = torch.nn.DataParallel(UNetBase(in_channels, out_channels, features))
         else:
-            self.base_model = base_model
+            self.unet = UNetBase(in_channels, out_channels, features)
         self.loss_fn = loss_fn
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.base_model(x)
+        return self.unet(x)
     
     @property
     def param_count(self) -> int:
@@ -201,11 +201,10 @@ if __name__ == "__main__":
     
     # Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    base_model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256])
-    model = Segmentation(base_model=base_model, loss_fn=DiceCELoss()).to(device)
+    model = UNet(in_channels=1, out_channels=3, features=[64, 128, 256], loss_fn=DiceCELoss()).to(device)
     print(f"Trainable parameters: {model.param_count}")
     print(f"Using device: {device}")
 
     model.training_loop(train_loader, val_loader, epochs=2, device=device)
 
-    torch.save(model.state_dict(), "runs/test_model.pt")
+    torch.save(model.state_dict(), "runs/unet_model.pt")
