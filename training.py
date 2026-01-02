@@ -6,8 +6,8 @@ from torch.utils.data import DataLoader
 import config
 
 
-RUN_NUM = 3
-TESTING = True
+RUN_NUM = 1
+TESTING = False
 
 try:
     conf = config.std_configs[RUN_NUM-1]

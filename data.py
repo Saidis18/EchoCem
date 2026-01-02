@@ -82,14 +82,9 @@ if __name__ == "__main__":
     # Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = Path(__file__).parent / "runs" / 'y_test_csv_file.csv'
+    Y_CSV = Path(__file__).parent / "runs" / 'y_test_1.csv'
 
-    transform = transforms.Compose([
-        transforms.Resize((160, 160)),
-        transforms.ToTensor()
-    ])
-
-    dataset = EchoCementDataset(X_DIR, Y_CSV, transform=transform)
+    dataset = EchoCementDataset(X_DIR, Y_CSV, transform=None)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     print(f"Dataset size: {len(dataloader)}")
     for image, label in dataloader:
