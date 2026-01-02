@@ -41,8 +41,8 @@ std_configs = [
         ]),
         trans_out=transforms.Pad((0, 0, 272 - 160, 0)),
         epochs=30,
-        batch_size_train=128,
-        batch_size_val=64
+        batch_size_train=32,
+        batch_size_val=128
     ),
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
@@ -50,8 +50,8 @@ std_configs = [
         trans_in=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
         trans_out=transforms.Resize((160, 272), interpolation=transforms.InterpolationMode.NEAREST),
         epochs=30,
-        batch_size_train=32,
-        batch_size_val=256
+        batch_size_train=128,
+        batch_size_val=64
     ),
     Config(
         loss_fn=DiceCELoss(),
