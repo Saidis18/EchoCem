@@ -50,8 +50,8 @@ std_configs = [
         trans_in=transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()]),
         trans_out=transforms.Resize((160, 272), interpolation=transforms.InterpolationMode.NEAREST),
         epochs=30,
-        batch_size_train=128,
-        batch_size_val=64
+        batch_size_train=32,
+        batch_size_val=256
     ),
     Config(
         loss_fn=DiceCELoss(),

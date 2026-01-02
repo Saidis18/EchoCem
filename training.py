@@ -37,6 +37,7 @@ if __name__ == "__main__":
     base_model = UNet(in_channels=1, out_channels=3, features=conf.features)
     model = Segmentation(base_model=base_model, loss_fn=conf.loss_fn).to(device)
     print(f"Trainable parameters: {model.param_count}")
+    print(f"Loss function: {conf.loss_fn}")
     print(f"Using device: {device}")
 
     model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
