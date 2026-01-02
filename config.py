@@ -1,4 +1,4 @@
-from segmentation import DiceCELoss
+from u_net import DiceCELoss
 import data
 import torch
 import torch.utils.data # type: ignore

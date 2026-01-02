@@ -1,4 +1,4 @@
-from segmentation import Segmentation, UNet
+from u_net import Segmentation, UNet
 import data
 import torch
 import torch.utils.data # type: ignore
