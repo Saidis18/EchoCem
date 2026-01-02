@@ -142,14 +142,12 @@ class UNet(torch.nn.Module):
     def predict(self, x: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
         original_size = x.shape[0], x.shape[1]
-        trans_in = transforms.Compose([transforms.Resize((160, 160)), transforms.ToTensor()])
-        trans_out = transforms.Resize(original_size, interpolation=transforms.InterpolationMode.NEAREST)
+        trans_in = transforms.Compose([transforms.Lambda(lambda img: img.crop((0, 0, min(img.width, 160), img.height))), transforms.ToTensor()])
         x = Image.fromarray(x) # type: ignore
         x = trans_in(x).to(torch.float32).to(device).unsqueeze(0) # type: ignore
         with torch.no_grad():
             logits = self(x)
             predictions = logits.argmax(dim=1)
-        predictions = trans_out(predictions.unsqueeze(1)).squeeze(1)
         return predictions.cpu()
 
 

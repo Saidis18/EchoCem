@@ -88,7 +88,7 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    dataset = EchoCementDataset(X_DIR, Y_CSV, transform=transform)
+    dataset = EchoCementDataset(X_DIR, Y_CSV, transform=None)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     print(f"Dataset size: {len(dataloader)}")
     for image, label in dataloader:

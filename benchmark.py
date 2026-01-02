@@ -18,7 +18,7 @@ def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch
 DATA_DIR = Path(__file__).parent / "data"
 X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
 RUNS_DIR = Path(__file__).parent / "runs"
-MODEL_PATH = RUNS_DIR / "unet_model.pt"
+MODEL_PATH = RUNS_DIR / "unet_model_1.pt"
 
 size_labels = 272
 
@@ -44,12 +44,7 @@ for img_path in sorted(X_TEST_DIR.glob("*.npy")):
     print(f"Processing {img_path.name}...")
     name = img_path.stem
     image = np.load(img_path)
-    x = (
-        torch.tensor(image, dtype=torch.float32)
-        .unsqueeze(0)
-        .unsqueeze(0)
-        .to(device)
-    )
+    x = image
 
     with torch.no_grad():
         pred = model.predict(x, device).squeeze(0).numpy()
@@ -58,6 +53,17 @@ for img_path in sorted(X_TEST_DIR.glob("*.npy")):
     if pred.shape[1] != size_labels:
         prediction_aux = -1 + np.zeros(160 * size_labels)
         prediction_aux[0 : 160 * 160] = pred.flatten()
+    else:
+        prediction_aux = pred.flatten()
+
+    size_labels = 272
+    if pred.shape[1] != size_labels:
+        print(f"Flattening from shape {pred.shape} to (160*{size_labels},)")
+        prediction_aux = np.zeros(160 * size_labels)
+        pred_raw = pred.flatten()
+        num_chunks = 160
+        for i in range(num_chunks):
+            prediction_aux[i * size_labels : i * size_labels + 160] = pred_raw[i * 160 : (i + 1) * 160]
     else:
         prediction_aux = pred.flatten()
 
