@@ -1,4 +1,4 @@
-from loss import DiceCELoss
+from loss import DiceCELoss, TVCELoss
 from pathlib import Path
 import torch
 from torchvision import transforms # type: ignore
@@ -33,8 +33,8 @@ class Config():
 
 std_configs = [
     Config(
-        loss_fn=torch.nn.CrossEntropyLoss(),
-        features=[64, 128, 256, 512],
+        loss_fn=TVCELoss(),
+        features=[64, 128, 256],
         trans_in=transforms.Compose([
             transforms.Lambda(lambda img: img.crop((0, 0, min(img.width, 160), img.height))), # type: ignore
             transforms.ToTensor()
