@@ -14,7 +14,7 @@ class Config():
             self,
             loss_fn: torch.nn.Module,
             features: list[int],
-            epochs: int,
+            epochs: list[int],
             batch_size_train: int,
             batch_size_val: int
         ):
@@ -28,28 +28,28 @@ std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256],
-        epochs=30,
+        epochs=[15, 5],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=TVCELoss(),
         features=[64, 128, 256],
-        epochs=15,
+        epochs=[15, 5],
         batch_size_train=16,
         batch_size_val=128
     ),
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256],
-        epochs=30,
+        epochs=[15, 5],
         batch_size_train=128,
         batch_size_val=64
     ),
     Config(
         loss_fn=DiceCELoss(),
         features=[64, 128, 256],
-        epochs=30,
+        epochs=[15, 5],
         batch_size_train=128,
         batch_size_val=64
     )
