@@ -3,3 +3,4 @@ data/
 runs/
 no_types/
 .secrets
+log/
