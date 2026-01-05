@@ -41,7 +41,7 @@ std_configs = [
         ]),
         trans_out=transforms.Pad((0, 0, 272 - 160, 0)),
         epochs=30,
-        batch_size_train=32,
+        batch_size_train=16,
         batch_size_val=128
     ),
     Config(
