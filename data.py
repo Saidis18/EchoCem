@@ -4,9 +4,7 @@ from typing import List, Tuple
 import torch
 import torch.utils.data
 from torchvision import transforms # type: ignore
-from PIL import Image
 import time
-import config
 
 try:
     import polars as pl
@@ -28,9 +26,8 @@ class BaseDataset(torch.utils.data.Dataset[torch.Tensor]):
 
 
 class EchoCementDataset(BaseDataset):
-    def __init__(self, images_dir: Path, labels_csv: Path, transform: config.Transformation | None = None):
+    def __init__(self, images_dir: Path, labels_csv: Path):
         self.features_dir = images_dir
-        self.transform = transform
         print(f"Reading csv file from: {labels_csv}")
         init_time = time.time()
         if HAS_POLARS:
@@ -52,15 +49,8 @@ class EchoCementDataset(BaseDataset):
         else:
             labels = self.labels.iloc[idx] # type: ignore
         label = np.array([v for v in labels if v != -1], dtype=np.int8).reshape(160, -1) # type: ignore
-
-        if self.transform:
-            image_pil = Image.fromarray(image)
-            image_out = self.transform(image_pil).to(torch.float32) # type: ignore
-            label_pil = Image.fromarray(label)
-            label_out = self.transform(label_pil).to(torch.long).squeeze(dim=0) # type: ignore
-        else:
-            image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
-            label_out = torch.tensor(label, dtype=torch.long)
+        image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
+        label_out = torch.tensor(label, dtype=torch.long)
         return image_out, label_out # type: ignore
 
 
@@ -78,13 +68,11 @@ def train_test_split(dataset: BaseDataset | BaseSubset, test_ratio: float) -> Tu
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     DATA_DIR = Path(__file__).parent / "data"
-    # X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
-    # Y_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
     Y_CSV = Path(__file__).parent / "runs" / 'y_test_1.csv'
 
-    dataset = EchoCementDataset(X_DIR, Y_CSV, transform=None)
+    dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     print(f"Dataset size: {len(dataloader)}")
     for image, label in dataloader:

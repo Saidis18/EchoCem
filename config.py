@@ -8,10 +8,9 @@ Transformation = transforms.Compose | torch.nn.Module
 
 class Config():
     DATA_DIR = Path(__file__).parent / "data"
-    X_TRAIN_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
-    Y_TRAIN_CSV = DATA_DIR / 'Y_train_T9NrBYo.csv'
-    X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
     RUNS_DIR = Path(__file__).parent / "runs"
+    X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
+    TEST_RATIO = 0.2
     
     def __init__(
             self,

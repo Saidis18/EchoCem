@@ -2,9 +2,7 @@ import torch
 from typing import List, Tuple
 import time
 import torch.utils.data
-from PIL import Image
 import numpy as np
-import config
 import matplotlib.pyplot as plt
 
 
@@ -146,12 +144,10 @@ class Segmentation(torch.nn.Module):
             end_time = time.time()
             print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
-    def predict(self, x: np.ndarray, device: torch.device, trans_in: config.Transformation, trans_out: config.Transformation) -> torch.Tensor:
+    def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
-        x = Image.fromarray(x) # type: ignore
-        x = trans_in(x).to(torch.float32).to(device).unsqueeze(0) # type: ignore
+        x = torch.tensor(img, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device) # type: ignore
         with torch.no_grad():
             logits = self(x)
             predictions = logits.argmax(dim=1)
-        predictions = trans_out(predictions.unsqueeze(1)).squeeze(1) # type: ignore
         return predictions.cpu() # type: ignore

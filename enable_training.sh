@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: ./strip_types.sh [SRC_DIR] [OUT_DIR]
+# Usage: ./enable_training .sh [SRC_DIR] [OUT_DIR]
 # Default: SRC_DIR="."  OUT_DIR="no_types"
 
 set -e

@@ -7,7 +7,7 @@ import config
 
 
 RUN_NUM = 1
-TESTING = False
+TESTING = True
 
 try:
     conf = config.std_configs[RUN_NUM-1]
@@ -21,16 +21,21 @@ if TESTING:
 
 
 if __name__ == "__main__":
-    dataset = data.EchoCementDataset(conf.X_TRAIN_DIR, conf.Y_TRAIN_CSV, transform=conf.trans_in)
+    dataset_160 = data.EchoCementDataset(conf.DATA_DIR / "X_train_160", conf.DATA_DIR / "Y_train_160.csv")
+    dataset_272 = data.EchoCementDataset(conf.DATA_DIR / "X_train_272", conf.DATA_DIR / "Y_train_272.csv")
     if TESTING:
-        dataset = torch.utils.data.Subset(dataset, list(range(64)))
+        dataset_160 = torch.utils.data.Subset(dataset_160, list(range(64)))
+        dataset_272 = torch.utils.data.Subset(dataset_272, list(range(64)))
     
-    train_dataset, val_dataset = data.train_test_split(dataset, test_ratio=0.2)
-    print(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
-    
+    train_dataset_160, val_dataset_160 = data.train_test_split(dataset_160, test_ratio=conf.TEST_RATIO)
+    train_dataset_272, val_dataset_272 = data.train_test_split(dataset_272, test_ratio=conf.TEST_RATIO)
+    print(f"Train dataset size: {len(train_dataset_160) + len(train_dataset_272)}, Validation dataset size: {len(val_dataset_160) + len(val_dataset_272)}")
+
     # Dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=conf.batch_size_train, shuffle=True, num_workers=6)
-    val_loader = DataLoader(val_dataset, batch_size=conf.batch_size_val, shuffle=False, num_workers=6)
+    train_loader_160 = DataLoader(train_dataset_160, batch_size=conf.batch_size_train, shuffle=True, num_workers=6)
+    train_loader_272 = DataLoader(train_dataset_272, batch_size=conf.batch_size_train, shuffle=True, num_workers=6)
+    val_loader_160 = DataLoader(val_dataset_160, batch_size=conf.batch_size_val, shuffle=False, num_workers=6)
+    val_loader_272 = DataLoader(val_dataset_272, batch_size=conf.batch_size_val, shuffle=False, num_workers=6)
     
     # Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,7 +45,8 @@ if __name__ == "__main__":
     print(f"Loss function: {conf.loss_fn}")
     print(f"Using device: {device}")
 
-    model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
+    model.training_loop(train_loader_272, val_loader_272, epochs=conf.epochs, device=device) # Largest dataset first
+    model.training_loop(train_loader_160, val_loader_160, epochs=conf.epochs, device=device)
 
     torch.save(model.state_dict(), conf.RUNS_DIR / f"unet_model_{RUN_NUM}.pt")
     print(f"Model saved to {conf.RUNS_DIR / f'unet_model_{RUN_NUM}.pt'}")

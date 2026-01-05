@@ -40,7 +40,7 @@ class Benchmark:
 
     def predict(self, image: np.ndarray) -> np.ndarray:
         with torch.no_grad():
-            pred = self.model.predict(image, self.device, self.conf.trans_in, self.conf.trans_out).squeeze(0).cpu().numpy()
+            pred = self.model.predict(image, self.device).squeeze(0).cpu().numpy()
         return pred
     
     @staticmethod
