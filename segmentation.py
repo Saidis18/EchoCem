@@ -5,6 +5,7 @@ import torch.utils.data
 from PIL import Image
 import numpy as np
 import config
+import matplotlib.pyplot as plt
 
 
 class Block(torch.nn.Module):
@@ -118,7 +119,7 @@ class Segmentation(torch.nn.Module):
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
-    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
+    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device, epoch: int) -> float:
         self.eval()
         total_loss = 0.0
         with torch.no_grad():
@@ -127,6 +128,11 @@ class Segmentation(torch.nn.Module):
                 outputs = self(inputs)
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.item()
+                try:
+                    plt.imshow(outputs.argmax(dim=1).squeeze().cpu()[0]) # type: ignore
+                    plt.savefig(f"log/plot_{epoch}.png", dpi=300, bbox_inches="tight") # type: ignore
+                except:
+                    pass
         return total_loss / len(dataloader)
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
@@ -135,7 +141,7 @@ class Segmentation(torch.nn.Module):
         for epoch in range(epochs):
             init_time = time.time()
             train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
-            val_loss = self.validate(val_dataloader, loss_fn, device)
+            val_loss = self.validate(val_dataloader, loss_fn, device, epoch)
             end_time = time.time()
             print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
