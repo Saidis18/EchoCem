@@ -129,7 +129,7 @@ class Segmentation(torch.nn.Module):
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.item()
                 try:
-                    plt.imshow(outputs.argmax(dim=1).squeeze().cpu()[0]) # type: ignore
+                    plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
                     plt.savefig(f"log/plot_{epoch}.png", dpi=300, bbox_inches="tight") # type: ignore
                 except:
                     pass
