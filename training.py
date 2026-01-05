@@ -7,7 +7,7 @@ import config
 
 
 RUN_NUM = 1
-TESTING = True
+TESTING = False
 
 try:
     conf = config.std_configs[RUN_NUM-1]

@@ -3,7 +3,6 @@ import numpy as np
 from typing import List, Tuple
 import torch
 import torch.utils.data
-from torchvision import transforms # type: ignore
 import time
 
 try:
