@@ -131,6 +131,7 @@ class Segmentation(torch.nn.Module):
                 try:
                     plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
                     plt.savefig(f"log/plot_{epoch}.png", dpi=300, bbox_inches="tight") # type: ignore
+                    del outputs
                 except:
                     pass
         return total_loss / len(dataloader)
