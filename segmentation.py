@@ -95,6 +95,7 @@ class Segmentation(torch.nn.Module):
         else:
             self.base_model = base_model
         self.loss_fn = loss_fn
+        self.epoch_count = 0
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.base_model(x)
@@ -106,6 +107,7 @@ class Segmentation(torch.nn.Module):
     _dataloader_t = torch.utils.data.DataLoader[torch.Tensor]
 
     def epoch(self, dataloader: _dataloader_t, optimizer: torch.optim.Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
+        self.epoch_count += 1
         self.train()
         total_loss = 0.0
         for inputs, targets in dataloader:
@@ -118,7 +120,7 @@ class Segmentation(torch.nn.Module):
             total_loss += loss.item()
         return total_loss / len(dataloader)
 
-    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device, epoch: int) -> float:
+    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
         self.eval()
         total_loss = 0.0
         with torch.no_grad():
@@ -129,8 +131,8 @@ class Segmentation(torch.nn.Module):
                 total_loss += loss.item()
                 try:
                     plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
-                    file = Path(f"log/plot_{epoch}.png")
-                    file = file if not file.exists() else file.with_name(f"plot_{epoch}_bis.png")
+                    file = Path(f"log/plot_{self.epoch_count}.png")
+                    file = file if not file.exists() else file.with_name(f"plot_{self.epoch_count}_bis.png")
                     plt.savefig(file, dpi=300, bbox_inches="tight") # type: ignore
                     plt.close()
                 except:
@@ -140,12 +142,12 @@ class Segmentation(torch.nn.Module):
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         loss_fn = self.loss_fn
-        for epoch in range(epochs):
+        for _ in range(epochs):
             init_time = time.time()
             train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
-            val_loss = self.validate(val_dataloader, loss_fn, device, epoch)
+            val_loss = self.validate(val_dataloader, loss_fn, device)
             end_time = time.time()
-            print(f"Epoch {epoch + 1}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
+            print(f"Epoch {self.epoch_count}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
