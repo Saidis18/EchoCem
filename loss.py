@@ -27,9 +27,10 @@ class DiceCELoss(torch.nn.Module):
 
 
 class TVCELoss(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, tv_weight: float, ce_weight: torch.Tensor = torch.tensor([1.0, 1.0, 1.0])):
         super(TVCELoss, self).__init__()  # type: ignore
-        self.ce_loss = torch.nn.CrossEntropyLoss(torch.tensor([0.6, 1.2, 1.2]))
+        self.ce_loss = torch.nn.CrossEntropyLoss(ce_weight)
+        self.tv_weight = tv_weight
 
     def tv_loss(self, x: torch.Tensor) -> torch.Tensor:
         ax1 = torch.abs(x[:, 1:, :] - x[:, :-1, :]).to(torch.float32)
@@ -39,5 +40,5 @@ class TVCELoss(torch.nn.Module):
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         ce_loss = self.ce_loss(inputs, targets)
         tv_loss = self.tv_loss(inputs)
-        total_loss = ce_loss + 0.2 * tv_loss
+        total_loss = ce_loss + self.tv_weight * tv_loss
         return total_loss
