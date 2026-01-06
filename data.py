@@ -4,6 +4,7 @@ from typing import List, Tuple
 import torch
 import torch.utils.data
 import time
+import config
 
 try:
     import polars as pl
@@ -53,15 +54,35 @@ class EchoCementDataset(BaseDataset):
         return image_out, label_out # type: ignore
 
 
-def train_test_split(dataset: BaseDataset | BaseSubset, test_ratio: float) -> Tuple[BaseSubset, BaseSubset]:
-    train_ratio = 1.0 - test_ratio
-    train_size = int(train_ratio * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+class DataHandler():
+    def __init__(self, positions: List[Tuple[Path, Path]], conf: config.Config, testing: bool = False):
+        self.conf = conf
+        self.loaders: List[Tuple[torch.utils.data.DataLoader[torch.Tensor], torch.utils.data.DataLoader[torch.Tensor]]] = []
+        for images_dir, labels_csv in positions:
+            dataset = EchoCementDataset(images_dir, labels_csv)
+            if testing:
+                dataset = torch.utils.data.Subset(dataset, list(range(32)))
+            train_dataset, val_dataset = DataHandler.train_test_split(dataset, test_ratio=self.conf.TEST_RATIO)
+            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True, num_workers=6)
+            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False, num_workers=6)
+            self.loaders.append((train_loader, val_loader))
+        assert len(self.loaders) == max(dataloader_idx for dataloader_idx, _ in self.conf.epochs) + 1, "Number of dataloaders does not match config."
+    
+    def get_loaders(self):
+        for dataloader_idx, epochs in self.conf.epochs:
+            train_loader, val_loader = self.loaders[dataloader_idx]
+            yield train_loader, val_loader, epochs
+    
+    @staticmethod
+    def train_test_split(dataset: BaseDataset | BaseSubset, test_ratio: float) -> Tuple[BaseSubset, BaseSubset]:
+        train_ratio = 1.0 - test_ratio
+        train_size = int(train_ratio * len(dataset))
+        val_size = len(dataset) - train_size
+        train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
-    train_subset = torch.utils.data.Subset(dataset, train_dataset.indices)
-    val_subset = torch.utils.data.Subset(dataset, val_dataset.indices)
-    return train_subset, val_subset
+        train_subset = torch.utils.data.Subset(dataset, train_dataset.indices)
+        val_subset = torch.utils.data.Subset(dataset, val_dataset.indices)
+        return train_subset, val_subset
 
 
 if __name__ == "__main__":
