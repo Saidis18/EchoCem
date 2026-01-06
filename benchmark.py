@@ -176,12 +176,6 @@ class Benchmark:
 
 
 if __name__ == "__main__":
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    if hasattr(torch, "use_deterministic_algorithms"):
-        torch.use_deterministic_algorithms(True)
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
-    RUN_NUM = 1  # Change this to select different configurations
+    RUN_NUM = 1
     benchmark = Benchmark(run_num=RUN_NUM)
     benchmark.run()
