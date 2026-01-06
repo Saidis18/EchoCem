@@ -124,7 +124,7 @@ class Benchmark:
     
     def _get_model(self) -> Segmentation:
         base_model = UNet(in_channels=1, out_channels=3, features=self.conf.features)
-        model = Segmentation(base_model=base_model, loss_fn=self.conf.loss_fn).to(self.device)
+        model = Segmentation(base_model=base_model, conf=self.conf).to(self.device)
         model.eval()
         return model
     
