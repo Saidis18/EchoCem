@@ -45,8 +45,8 @@ if __name__ == "__main__":
     print(f"Loss function: {conf.loss_fn}")
     print(f"Using device: {device}")
 
-    model.training_loop(train_loader_272, val_loader_272, epochs=conf.epochs[0], device=device) # Largest dataset first
-    model.training_loop(train_loader_160, val_loader_160, epochs=conf.epochs[1], device=device)
+    model.training_loop(train_loader_160, val_loader_272, epochs=conf.epochs[0], device=device)
+    model.training_loop(train_loader_272, val_loader_160, epochs=conf.epochs[1], device=device)
 
     torch.save(model.state_dict(), conf.RUNS_DIR / f"unet_model_{RUN_NUM}.pt")
     print(f"Model saved to {conf.RUNS_DIR / f'unet_model_{RUN_NUM}.pt'}")

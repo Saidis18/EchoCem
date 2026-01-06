@@ -39,5 +39,5 @@ class TVCELoss(torch.nn.Module):
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         ce_loss = self.ce_loss(inputs, targets)
         tv_loss = self.tv_loss(inputs)
-        total_loss = ce_loss + 0.5 * tv_loss
+        total_loss = ce_loss + 0.2 * tv_loss
         return total_loss

@@ -28,29 +28,22 @@ std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256],
-        epochs=[15, 5],
+        epochs=[3, 17],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=TVCELoss(),
         features=[64, 128, 256],
-        epochs=[15, 5],
-        batch_size_train=16,
+        epochs=[3, 17],
+        batch_size_train=64,
         batch_size_val=128
-    ),
-    Config(
-        loss_fn=torch.nn.CrossEntropyLoss(),
-        features=[64, 128, 256],
-        epochs=[15, 5],
-        batch_size_train=128,
-        batch_size_val=64
     ),
     Config(
         loss_fn=DiceCELoss(),
         features=[64, 128, 256],
-        epochs=[15, 5],
-        batch_size_train=128,
-        batch_size_val=64
+        epochs=[3, 17],
+        batch_size_train=64,
+        batch_size_val=128
     )
 ]
