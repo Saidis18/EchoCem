@@ -10,7 +10,7 @@ import config
 class Block(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
         super(Block, self).__init__() # type: ignore
-        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=5, padding=2)
+        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
         self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         self.relu = torch.nn.ReLU()
     
