@@ -4,7 +4,6 @@ import time
 import torch.utils.data
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 import config
 
 
@@ -133,9 +132,7 @@ class Segmentation(torch.nn.Module):
                 total_loss += loss.item()
                 try:
                     plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
-                    file = Path(f"log/plot_{self.epoch_count}.png")
-                    file = file if not file.exists() else file.with_name(f"plot_{self.epoch_count}_bis.png")
-                    plt.savefig(file, dpi=300, bbox_inches="tight") # type: ignore
+                    plt.savefig(f"log/plot_{self.epoch_count}.png", dpi=300, bbox_inches="tight") # type: ignore
                     plt.close()
                 except:
                     pass
