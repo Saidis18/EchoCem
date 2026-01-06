@@ -5,6 +5,7 @@ import torch.utils.data
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import config
 
 
 class Block(torch.nn.Module):
@@ -87,14 +88,15 @@ class UNet(torch.nn.Module):
 
 
 class Segmentation(torch.nn.Module):
-    def __init__(self, base_model: torch.nn.Module, loss_fn: torch.nn.Module):
+    def __init__(self, base_model: torch.nn.Module, conf: config.Config):
         super(Segmentation, self).__init__() # type: ignore
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs for segmentation")
             self.base_model = torch.nn.DataParallel(base_model)
         else:
             self.base_model = base_model
-        self.loss_fn = loss_fn
+        self.loss_fn = conf.loss_fn
+        self.conf = conf
         self.epoch_count = 0
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -147,7 +149,7 @@ class Segmentation(torch.nn.Module):
             train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
             val_loss = self.validate(val_dataloader, loss_fn, device)
             end_time = time.time()
-            print(f"Epoch {self.epoch_count}/{epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
+            print(f"Epoch {self.epoch_count}/{self.conf.num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
 
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()

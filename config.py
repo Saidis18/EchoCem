@@ -1,12 +1,11 @@
-from loss import DiceCELoss, TVCELoss
-from pathlib import Path
+import loss
+import pathlib
 import torch
-from torchvision import transforms # type: ignore
 
 
 class Config():
-    DATA_DIR = Path(__file__).parent / "data"
-    RUNS_DIR = Path(__file__).parent / "runs"
+    DATA_DIR = pathlib.Path(__file__).parent / "data"
+    RUNS_DIR = pathlib.Path(__file__).parent / "runs"
     X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
     TEST_RATIO = 0.2
     
@@ -23,26 +22,30 @@ class Config():
         self.epochs = epochs
         self.batch_size_train = batch_size_train
         self.batch_size_val = batch_size_val
+    
+    @property
+    def num_epochs(self) -> int:
+        return sum(self.epochs)
 
 std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
         features=[64, 128, 256],
-        epochs=[3, 17],
+        epochs=[2, 8, 2, 8],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
-        loss_fn=TVCELoss(),
+        loss_fn=loss.TVCELoss(),
         features=[64, 128, 256],
-        epochs=[3, 17],
+        epochs=[2, 8, 2, 8],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
-        loss_fn=DiceCELoss(),
+        loss_fn=loss.DiceCELoss(),
         features=[64, 128, 256],
-        epochs=[3, 17],
+        epochs=[2, 8, 2, 8],
         batch_size_train=64,
         batch_size_val=128
     )
