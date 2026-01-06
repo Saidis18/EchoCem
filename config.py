@@ -31,28 +31,28 @@ class Config():
 std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(),
-        features=[64, 128, 256],
+        features=[64, 128, 256, 512],
         epochs=[(0, 4), (1, 1), (0, 4), (1, 1), (0, 4), (1, 1), (0, 5)],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(torch.tensor([0.6, 1.4, 1.2])),
-        features=[64, 128, 256],
+        features=[64, 128, 256, 512],
         epochs=[(0, 4), (1, 1), (0, 4), (1, 1), (0, 4), (1, 1), (0, 5)],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=loss.TVCELoss(tv_weight=0.4, ce_weight=torch.tensor([0.6, 1.4, 1.2])),
-        features=[64, 128, 256],
+        features=[64, 128, 256, 512],
         epochs=[(0, 4), (1, 1), (0, 4), (1, 1), (0, 4), (1, 1), (0, 5)],
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=loss.DiceCELoss(),
-        features=[64, 128, 256],
+        features=[64, 128, 256, 512],
         epochs=[(0, 4), (1, 1), (0, 4), (1, 1), (0, 4), (1, 1), (0, 5)],
         batch_size_train=64,
         batch_size_val=128

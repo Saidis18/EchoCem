@@ -4,3 +4,4 @@ runs/
 no_types/
 .secrets
 log/
+freezer/
