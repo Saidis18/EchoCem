@@ -6,7 +6,7 @@ import config
 
 
 RUN_NUM = 1
-TESTING = False
+TESTING = True
 
 try:
     conf = config.std_configs[RUN_NUM-1]
@@ -14,16 +14,13 @@ except IndexError:
     raise ValueError(f"Invalid RUN_NUM: {RUN_NUM}")
 
 if TESTING:
-    conf.epochs = [(0, 2), (1, 2)]
+    conf.epochs = [(0, 2)]
     conf.batch_size_train = 4
     conf.batch_size_val = 4
 
 
 if __name__ == "__main__":
-    positions=[
-        (conf.DATA_DIR / "X_train_272", conf.DATA_DIR / "Y_train_272.csv"),
-        (conf.DATA_DIR / "X_train_160", conf.DATA_DIR / "Y_train_160.csv")
-    ]
+    positions=[(conf.DATA_DIR / "X_train_uDRk9z9" / "images", conf.DATA_DIR / "Y_train_T9NrBYo.csv")]
 
     data_handler = data.DataHandler(positions=positions, conf=conf, testing=TESTING)
     
