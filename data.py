@@ -53,8 +53,38 @@ class EchoCementDataset(BaseDataset):
         label_out = torch.tensor(label, dtype=torch.long)
         size = image_out.shape[2]
         image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
+        image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         label_out = torch.nn.functional.pad(label_out, (0, 272 - size), mode='constant', value=-100)
         return image_out, label_out # type: ignore
+
+
+class PreTrainingDataset(BaseDataset):
+    def __init__(self, paths: List[Path]):
+        self.paths = paths
+        # Cache all file paths once during initialization to ensure consistency
+        self.all_files: List[Path] = []
+        for path in paths:
+            self.all_files.extend(sorted(list(path.glob("*.npy"))))
+    
+    def __len__(self) -> int:
+        return len(self.all_files)
+
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]: # type: ignore
+        if idx >= len(self.all_files):
+            raise IndexError("Index out of range")
+        
+        image_path = self.all_files[idx]
+        image = np.load(image_path)
+        image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
+        size = image_out.shape[2]
+        image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
+        image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
+        
+        # Create noisy version as label (image + Gaussian noise)
+        noise = torch.randn_like(image_out)*0.1  # Standard deviation of 0.1
+        noisy_image = image_out + noise
+        
+        return noisy_image, image_out # type: ignore
 
 
 class DataHandler():
@@ -89,6 +119,7 @@ class DataHandler():
 
 
 if __name__ == "__main__":
+    max_count = 20
     import matplotlib.pyplot as plt
     DATA_DIR = Path(__file__).parent / "data"
 
@@ -98,6 +129,7 @@ if __name__ == "__main__":
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     print(f"Dataset size: {len(dataloader)}")
+    counter = 0
     for image, label in dataloader:
         print(f"Batch image shape: {image.shape}, Batch label shape: {label.shape}")
         image = image.squeeze(0, 1)
@@ -107,3 +139,28 @@ if __name__ == "__main__":
         axarr[0].imshow(image)
         axarr[1].imshow(label)
         plt.show() # type: ignore
+        counter += 1
+        if counter >= max_count:
+            break
+    
+    paths = [
+        DATA_DIR / "X_test_xNbnvIa" / "images",
+        DATA_DIR / "X_train_uDRk9z9" / "images",
+        DATA_DIR / "X_unlabeled_mtkxUlo" / "images"
+    ]
+    pretrain_dataset = PreTrainingDataset(paths)
+    pretrain_dataloader = torch.utils.data.DataLoader(pretrain_dataset, batch_size=1, shuffle=True)
+    print(f"PreTraining Dataset size: {len(pretrain_dataloader)}")
+    counter = 0
+    for noisy_image, clean_image in pretrain_dataloader:
+        print(f"Batch noisy image shape: {noisy_image.shape}, Batch clean image shape: {clean_image.shape}")
+        noisy_image = noisy_image.squeeze(0, 1)
+        clean_image = clean_image.squeeze(0, 1)
+        print(f"Noisy Image shape: {noisy_image.shape}, Clean Image shape: {clean_image.shape}")
+        f, axarr = plt.subplots(2, 1) # type: ignore
+        axarr[0].imshow(noisy_image)
+        axarr[1].imshow(clean_image)
+        plt.show() # type: ignore
+        counter += 1
+        if counter >= max_count:
+            break
