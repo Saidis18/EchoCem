@@ -38,7 +38,11 @@ if __name__ == "__main__":
         model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
 
         model.base_model.final_conv = torch.nn.Conv2d(conf.features[0], 3, kernel_size=1).to(device)
-        model.loss_fn = torch.nn.CrossEntropyLoss(torch.tensor([0.6, 1.4, 1.2]), ignore_index=-100)
+        # Create loss function with weights on the correct device
+        model.loss_fn = torch.nn.CrossEntropyLoss(
+            torch.tensor([0.6, 1.4, 1.2], device=device), 
+            ignore_index=-100
+        )
         print(f"Pre-training completed. Proceeding to segmentation training...")
     else:
         base_model = UNet(in_channels=1, out_channels=3, features=conf.features)
