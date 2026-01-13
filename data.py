@@ -51,6 +51,9 @@ class EchoCementDataset(BaseDataset):
         label = np.array([v for v in labels if v != -1], dtype=np.int8).reshape(160, -1) # type: ignore
         image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
         label_out = torch.tensor(label, dtype=torch.long)
+        size = image_out.shape[2]
+        image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
+        label_out = torch.nn.functional.pad(label_out, (0, 272 - size), mode='constant', value=0)
         return image_out, label_out # type: ignore
 
 
