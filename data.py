@@ -65,6 +65,7 @@ class PreTrainingDataset(BaseDataset):
         self.all_files: List[Path] = []
         for path in paths:
             self.all_files.extend(sorted(list(path.glob("*.npy"))))
+        print(f"PreTrainingDataset initialized with {len(self.all_files)} files from {len(paths)} directories.")
     
     def __len__(self) -> int:
         return len(self.all_files)
@@ -88,23 +89,17 @@ class PreTrainingDataset(BaseDataset):
 
 
 class DataHandler():
-    def __init__(self, positions: List[Tuple[Path, Path]], conf: config.Config, testing: bool = False):
+    def __init__(self, dataset: BaseDataset | BaseSubset, conf: config.Config, testing: bool = False):
         self.conf = conf
-        self.loaders: List[Tuple[torch.utils.data.DataLoader[torch.Tensor], torch.utils.data.DataLoader[torch.Tensor]]] = []
-        for images_dir, labels_csv in positions:
-            dataset = EchoCementDataset(images_dir, labels_csv)
-            if testing:
-                dataset = torch.utils.data.Subset(dataset, list(range(32)))
-            train_dataset, val_dataset = DataHandler.train_test_split(dataset, test_ratio=self.conf.TEST_RATIO)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True, num_workers=6)
-            val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False, num_workers=6)
-            self.loaders.append((train_loader, val_loader))
-        assert len(self.loaders) == max(dataloader_idx for dataloader_idx, _ in self.conf.epochs) + 1, "Number of dataloaders does not match config."
+        if testing:
+            dataset = torch.utils.data.Subset(dataset, list(range(32)))
+        train_dataset, val_dataset = DataHandler.train_test_split(dataset, test_ratio=self.conf.TEST_RATIO)
+        self.train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True, num_workers=6)
+        self.val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False, num_workers=6)
+
     
     def get_loaders(self):
-        for dataloader_idx, epochs in self.conf.epochs:
-            train_loader, val_loader = self.loaders[dataloader_idx]
-            yield train_loader, val_loader, epochs
+        return self.train_loader, self.val_loader
     
     @staticmethod
     def train_test_split(dataset: BaseDataset | BaseSubset, test_ratio: float) -> Tuple[BaseSubset, BaseSubset]:
@@ -124,7 +119,7 @@ if __name__ == "__main__":
     DATA_DIR = Path(__file__).parent / "data"
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = Path(__file__).parent / "runs" / 'y_test_1.csv'
+    Y_CSV = Path(__file__).parent / "runs" / 'y_test_2.csv'
 
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
