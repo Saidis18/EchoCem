@@ -118,8 +118,16 @@ class WeightsLoader:
         model: torch.nn.Module,
         model_path: Path,
         device: torch.device,
+        strict: bool = True,
     ) -> None:
-        """Load weights from a checkpoint file into the model."""
+        """Load weights from a checkpoint file into the model.
+        
+        Args:
+            model: PyTorch model to load weights into
+            model_path: Path to checkpoint file
+            device: Device to load weights to
+            strict: If True, all keys must match. If False, allow missing/extra keys.
+        """
         if not model_path.exists():
             raise FileNotFoundError(f"Missing model weights: {model_path}")
         
@@ -128,7 +136,9 @@ class WeightsLoader:
         
         expected = model.state_dict()
         normalized = WeightsLoader.normalize_state_dict(state_dict, expected)
-        WeightsLoader.assert_state_dict_compatible(normalized, expected, context=f"loading {model_path.name}")
         
-        # Now safe to load strictly.
-        model.load_state_dict(normalized, strict=True)
+        if strict:
+            WeightsLoader.assert_state_dict_compatible(normalized, expected, context=f"loading {model_path.name}")
+        
+        # Load with strict=strict parameter
+        model.load_state_dict(normalized, strict=strict)
