@@ -1,6 +1,34 @@
 import torch
 
 
+class WeightedCELoss(torch.nn.Module):
+    """Weighted CrossEntropyLoss with ignore_index support for older PyTorch."""
+
+    def __init__(self, weight: torch.Tensor, ignore_index: int=-100):
+        super(WeightedCELoss, self).__init__()  # type: ignore
+        self.weight = weight
+        self.ignore_index = ignore_index
+
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        # Create mask for valid pixels (not ignored)
+        mask = targets != self.ignore_index
+
+        # Replace ignored indices with 0 temporarily (valid class index)
+        targets_safe = targets.clone()
+        targets_safe[~mask] = 0
+
+        # Compute per-pixel CE loss without reduction
+        ce_loss = torch.nn.functional.cross_entropy(inputs, targets_safe, reduction="none")
+
+        # Apply class weights manually
+        weight_map = self.weight[targets_safe]
+        weighted_loss = ce_loss * weight_map
+
+        # Apply mask and compute mean over valid pixels only
+        weighted_loss = weighted_loss * mask.float()
+        return weighted_loss.sum() / mask.float().sum().clamp(min=1)
+
+
 class DiceCELoss(torch.nn.Module):
     def __init__(self, weight_ce: float = 0.5, smooth: float = 1e-6):
         super(DiceCELoss, self).__init__() # type: ignore
