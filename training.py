@@ -5,7 +5,7 @@ import torch.utils.data # type: ignore
 import config
 
 
-RUN_NUM = 1
+RUN_NUM = 2
 TESTING = False
 
 try:
