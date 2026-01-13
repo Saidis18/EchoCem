@@ -29,7 +29,7 @@ if __name__ == "__main__":
         
         base_model = UNet(in_channels=1, out_channels=1, features=conf.features)
         model = Segmentation(base_model=base_model, conf=conf).to(device)
-        model.set_loss_fn(torch.nn.L1Loss())
+        model.loss_fn = torch.nn.L1Loss()
         print(f"Trainable parameters: {model.param_count}")
         print(f"Loss function: {model.loss_fn}")
         print(f"Using device: {device}")
@@ -37,9 +37,8 @@ if __name__ == "__main__":
         train_loader, val_loader = data_handler.get_loaders()
         model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
 
-        # Replace final_conv layer for 3-class segmentation task and move to device
         model.base_model.final_conv = torch.nn.Conv2d(conf.features[0], 3, kernel_size=1).to(device)
-        model.reset_loss_fn()
+        model.loss_fn = torch.nn.CrossEntropyLoss(torch.tensor([0.6, 1.4, 1.2]), ignore_index=-100)
         print(f"Pre-training completed. Proceeding to segmentation training...")
     else:
         base_model = UNet(in_channels=1, out_channels=3, features=conf.features)

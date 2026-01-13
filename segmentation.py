@@ -122,15 +122,7 @@ class Segmentation(torch.nn.Module):
     @property
     def param_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-    
-    def set_loss_fn(self, loss_fn: torch.nn.Module) -> None:
-        self._resetable_loss_fn = self.loss_fn
-        self.loss_fn = loss_fn
-    
-    def reset_loss_fn(self) -> None:
-        if hasattr(self, '_resetable_loss_fn'):
-            self.loss_fn = self._resetable_loss_fn
-    
+
     _dataloader_t = torch.utils.data.DataLoader[torch.Tensor]
 
     def epoch(self, dataloader: _dataloader_t, optimizer: torch.optim.Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
