@@ -53,7 +53,7 @@ class EchoCementDataset(BaseDataset):
         label_out = torch.tensor(label, dtype=torch.long)
         size = image_out.shape[2]
         image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
-        label_out = torch.nn.functional.pad(label_out, (0, 272 - size), mode='constant', value=0)
+        label_out = torch.nn.functional.pad(label_out, (0, 272 - size), mode='constant', value=-100)
         return image_out, label_out # type: ignore
 
 
