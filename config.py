@@ -33,14 +33,14 @@ std_configs = [
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(ignore_index=-100),
         features=[64, 128, 256, 512],
-        epochs=15,
+        epochs=30,
         batch_size_train=64,
         batch_size_val=128
     ),
     Config(
         loss_fn=torch.nn.CrossEntropyLoss(torch.tensor([0.6, 1.4, 1.2]), ignore_index=-100),
         features=[64, 128, 256, 512],
-        epochs=15,
+        epochs=30,
         batch_size_train=64,
         batch_size_val=128
     ),

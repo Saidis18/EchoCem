@@ -82,7 +82,7 @@ class PreTrainingDataset(BaseDataset):
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         
         # Create noisy version as label (image + Gaussian noise)
-        noise = torch.randn_like(image_out)*0.15  # Standard deviation of 0.15
+        noise = torch.randn_like(image_out)*0.1  # Standard deviation of 0.1
         noisy_image = image_out + noise
         
         return noisy_image, image_out # type: ignore
