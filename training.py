@@ -3,7 +3,6 @@ import data
 import torch
 import torch.utils.data # type: ignore
 import config
-import loss
 
 
 RUN_NUM = 2
@@ -40,7 +39,7 @@ if __name__ == "__main__":
 
         model.base_model.final_conv = torch.nn.Conv2d(conf.features[0], 3, kernel_size=1).to(device)
         # Create loss function with weights on the correct device
-        model.loss_fn = loss.WeightedCELoss(weight=torch.tensor([0.6, 1.4, 1.2], device=device), ignore_index=-100).to(device)
+        model.loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-100).to(device)
         model.epoch_count = 0
         print(f"Pre-training completed. Proceeding to segmentation training...")
     else:

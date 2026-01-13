@@ -21,12 +21,16 @@ class WeightedCELoss(torch.nn.Module):
         ce_loss = torch.nn.functional.cross_entropy(inputs, targets_safe, reduction="none")
 
         # Apply class weights manually
-        weight_map = self.weight[targets_safe]
+        # targets_safe is [batch, height, width], weight is [3]
+        # We need to index weight with targets_safe to get a [batch, height, width] weight map
+        # Use view to handle the indexing safely
+        weight_map = self.weight[targets_safe.long()]
         weighted_loss = ce_loss * weight_map
 
         # Apply mask and compute mean over valid pixels only
         weighted_loss = weighted_loss * mask.float()
-        return weighted_loss.sum() / mask.float().sum().clamp(min=1)
+        total_valid = mask.float().sum().clamp(min=1)
+        return weighted_loss.sum() / total_valid
 
 
 class DiceCELoss(torch.nn.Module):
