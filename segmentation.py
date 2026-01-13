@@ -47,32 +47,50 @@ class UpBlock(torch.nn.Module):
         return x
 
 
-class UNet(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, features: List[int]):
-        super(UNet, self).__init__() # type: ignore
-        dims_down, dims_up = UNet._get_dims(features)
+class Encoder(torch.nn.Module):
+    def __init__(self, in_channels: int, features: List[int], dims_down: List[Tuple[int, int]]):
+        super(Encoder, self).__init__() # type: ignore
 
         self.first_down = DownBlock(in_channels, features[0])
         self.down_blocks = torch.nn.ModuleList([DownBlock(in_ch, out_ch) for in_ch, out_ch in dims_down])
         self.bottleneck = Block(features[-1], features[-1] * 2)
-        self.up_blocks = torch.nn.ModuleList([UpBlock(in_ch, out_ch) for in_ch, out_ch in dims_up])
-        self.last_up = UpBlock(features[0] * 2, features[0])
-        self.final_conv = torch.nn.Conv2d(features[0], out_channels, kernel_size=1)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         skip, x = self.first_down(x)
         skip_connections: List[torch.Tensor] = [skip]
         for down in self.down_blocks:
             skip, x = down(x)
             skip_connections.append(skip)
-        
         x = self.bottleneck(x)
-        skip_connections = skip_connections[::-1]
-        
+        return x, skip_connections[::-1]
+
+
+class Decoder(torch.nn.Module):
+    def __init__(self, features: List[int], dims_up: List[Tuple[int, int]]):
+        super(Decoder, self).__init__() # type: ignore
+
+        self.up_blocks = torch.nn.ModuleList([UpBlock(in_ch, out_ch) for in_ch, out_ch in dims_up])
+        self.last_up = UpBlock(features[0] * 2, features[0])
+    
+    def forward(self, x: torch.Tensor, skip_connections: List[torch.Tensor]) -> torch.Tensor:
         for idx, up in enumerate(self.up_blocks):
             x = up(x, skip_connections[idx])
-        
         x = self.last_up(x, skip_connections[-1])
+        return x
+
+
+class UNet(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, features: List[int]):
+        super(UNet, self).__init__() # type: ignore
+        dims_down, dims_up = UNet._get_dims(features)
+
+        self.encoder = Encoder(in_channels, features, dims_down)
+        self.decoder = Decoder(features, dims_up)
+        self.final_conv = torch.nn.Conv2d(features[0], out_channels, kernel_size=1)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x, skip_connections = self.encoder(x)
+        x = self.decoder(x, skip_connections)
         x = self.final_conv(x)
         return x
     
