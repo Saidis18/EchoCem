@@ -122,6 +122,8 @@ class Segmentation(torch.nn.Module):
         return total_loss / len(dataloader)
 
     def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
+        if self.conf.TEST_RATIO == 0.0:
+            return 0.0
         self.eval()
         total_loss = 0.0
         with torch.no_grad():

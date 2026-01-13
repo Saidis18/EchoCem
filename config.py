@@ -8,7 +8,7 @@ class Config():
     DATA_DIR = pathlib.Path(__file__).parent / "data"
     RUNS_DIR = pathlib.Path(__file__).parent / "runs"
     X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    TEST_RATIO = 0.2
+    TEST_RATIO = 0.0
     
     def __init__(
             self,
