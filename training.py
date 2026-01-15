@@ -27,25 +27,27 @@ if __name__ == "__main__":
     base_model = UNet(in_channels=1, out_channels=3, features=conf.features)
     model = Segmentation(base_model=base_model, conf=conf).to(device)
 
-    pretrained_path = conf.RUNS_DIR / f"pretrained_unet_{RUN_NUM}.pt"
+    if PRE_TRAIN:
+        pretrained_path = conf.RUNS_DIR / f"pretrained_unet_{RUN_NUM}.pt"
+        if pretrained_path.exists():
+            print(f"Pre-training skipped. Using cached pretrained model at {pretrained_path}")
+        else:
+            print(f"Starting pre-training...")
+            dataset = data.PreTrainingDataset(conf.PRETRAINING_PATHS)
+            data_handler = data.DataHandler(dataset, conf=conf, testing=TESTING)
+            
+            base_model = UNet(in_channels=1, out_channels=1, features=conf.features)
+            pretrained_model = Segmentation(base_model=base_model, conf=conf).to(device)
+            pretrained_model.loss_fn = torch.nn.L1Loss()
+            print(f"Trainable parameters: {pretrained_model.param_count}")
+            print(f"Loss function: {pretrained_model.loss_fn}")
+            print(f"Using device: {device}")
 
-    if PRE_TRAIN and not pretrained_path.exists():
-        print(f"Starting pre-training...")
-        dataset = data.PreTrainingDataset(conf.PRETRAINING_PATHS)
-        data_handler = data.DataHandler(dataset, conf=conf, testing=TESTING)
-        
-        base_model = UNet(in_channels=1, out_channels=1, features=conf.features)
-        pretrained_model = Segmentation(base_model=base_model, conf=conf).to(device)
-        pretrained_model.loss_fn = torch.nn.L1Loss()
-        print(f"Trainable parameters: {pretrained_model.param_count}")
-        print(f"Loss function: {pretrained_model.loss_fn}")
-        print(f"Using device: {device}")
-
-        train_loader, val_loader = data_handler.get_loaders()
-        pretrained_model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
-        # Save pretrained model
-        torch.save(pretrained_model.state_dict(), pretrained_path)
-        print(f"Pretrained model saved to {pretrained_path}")
+            train_loader, val_loader = data_handler.get_loaders()
+            pretrained_model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
+            # Save pretrained model
+            torch.save(pretrained_model.state_dict(), pretrained_path)
+            print(f"Pretrained model saved to {pretrained_path}")
         
         # Load encoder and decoder weights from pretrained model (strict=False allows final_conv mismatch)
         WeightsLoader.load_weights(model.base_model, Path(pretrained_path), device, strict=False)

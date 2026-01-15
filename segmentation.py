@@ -150,7 +150,7 @@ class Segmentation(torch.nn.Module):
                 outputs = self(inputs)
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.detach()
-                
+                self.log_image(outputs, targets)
         return total_loss / len(dataloader)
     
     def log_image(self, model_output: torch.Tensor, targets: torch.Tensor) -> None:
