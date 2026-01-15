@@ -2,7 +2,7 @@ import torch
 
 
 class DiceCELoss(torch.nn.Module):
-    def __init__(self, weight_ce: float = 0.5, smooth: float = 1e-6):
+    def __init__(self, weight_ce: float = 0.1, smooth: float = 1e-6):
         super(DiceCELoss, self).__init__() # type: ignore
         self.weight_ce = weight_ce
         self.smooth = smooth
