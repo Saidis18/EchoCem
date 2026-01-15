@@ -27,7 +27,9 @@ if __name__ == "__main__":
     base_model = UNet(in_channels=1, out_channels=3, features=conf.features)
     model = Segmentation(base_model=base_model, conf=conf).to(device)
 
-    if PRE_TRAIN:
+    pretrained_path = conf.RUNS_DIR / f"pretrained_unet_{RUN_NUM}.pt"
+
+    if PRE_TRAIN and not pretrained_path.exists():
         print(f"Starting pre-training...")
         dataset = data.PreTrainingDataset(conf.PRETRAINING_PATHS)
         data_handler = data.DataHandler(dataset, conf=conf, testing=TESTING)
@@ -42,7 +44,6 @@ if __name__ == "__main__":
         train_loader, val_loader = data_handler.get_loaders()
         pretrained_model.training_loop(train_loader, val_loader, epochs=conf.epochs, device=device)
         # Save pretrained model
-        pretrained_path = conf.RUNS_DIR / f"pretrained_unet_{RUN_NUM}.pt"
         torch.save(pretrained_model.state_dict(), pretrained_path)
         print(f"Pretrained model saved to {pretrained_path}")
         

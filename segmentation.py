@@ -150,22 +150,25 @@ class Segmentation(torch.nn.Module):
                 outputs = self(inputs)
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.detach()
-                try:
-                    if outputs.shape[1] > 1:
-                        prediction = outputs.argmax(dim=1).squeeze().detach().cpu()[0]
-                        out_name = f"log/train_{self.epoch_count}.png"
-                    else:
-                        prediction = outputs.squeeze().detach().cpu()[0]
-                        out_name = f"log/pre_train_{self.epoch_count}.png"
-                    _, axarr = plt.subplots(2, 1) # type: ignore
-                    axarr[0].imshow(prediction)
-                    axarr[1].imshow(targets.squeeze().detach().cpu()[0])
-                    plt.savefig(out_name, dpi=300, bbox_inches="tight") # type: ignore
-                    
-                    plt.close()
-                except:
-                    pass
+                
         return total_loss / len(dataloader)
+    
+    def log_image(self, model_output: torch.Tensor, targets: torch.Tensor) -> None:
+        idx = np.random.randint(0, model_output.shape[0], (1,)).item()
+        try:
+            if model_output.shape[1] > 1:
+                prediction = model_output.argmax(dim=1).squeeze().detach().cpu()[idx]
+                out_name = f"log/train_{self.epoch_count}.png"
+            else:
+                prediction = model_output.squeeze().detach().cpu()[idx]
+                out_name = f"log/pre_train_{self.epoch_count}.png"
+            _, axarr = plt.subplots(2, 1) # type: ignore
+            axarr[0].imshow(prediction)
+            axarr[1].imshow(targets.squeeze().detach().cpu()[idx])
+            plt.savefig(out_name, dpi=300, bbox_inches="tight") # type: ignore
+            plt.close()
+        except:
+            pass
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
