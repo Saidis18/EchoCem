@@ -151,8 +151,17 @@ class Segmentation(torch.nn.Module):
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.detach()
                 try:
-                    plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
-                    plt.savefig(f"log/plot_{self.epoch_count}.png", dpi=300, bbox_inches="tight") # type: ignore
+                    if outputs.shape[1] > 1:
+                        prediction = outputs.argmax(dim=1).squeeze().detach().cpu()[0]
+                        out_name = f"log/train_{self.epoch_count}.png"
+                    else:
+                        prediction = outputs.squeeze().detach().cpu()[0]
+                        out_name = f"log/pre_train_{self.epoch_count}.png"
+                    _, axarr = plt.subplots(2, 1) # type: ignore
+                    axarr[0].imshow(prediction)
+                    axarr[1].imshow(targets.squeeze().detach().cpu()[0])
+                    plt.savefig(out_name, dpi=300, bbox_inches="tight") # type: ignore
+                    
                     plt.close()
                 except:
                     pass
