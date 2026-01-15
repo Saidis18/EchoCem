@@ -28,7 +28,7 @@ if __name__ == "__main__":
     model = Segmentation(base_model=base_model, conf=conf).to(device)
 
     if PRE_TRAIN:
-        pretrained_path = conf.RUNS_DIR / f"pretrained_unet_{RUN_NUM}.pt"
+        pretrained_path = conf.RUNS_DIR / f"pretrained_unet.pt"
         if pretrained_path.exists():
             print(f"Pre-training skipped. Using cached pretrained model at {pretrained_path}")
         else:
