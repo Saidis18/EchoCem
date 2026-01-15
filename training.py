@@ -23,9 +23,6 @@ if TESTING:
 
 
 if __name__ == "__main__":
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cudnn.enabled = True
-    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     base_model = UNet(in_channels=1, out_channels=3, features=conf.features)
     model = Segmentation(base_model=base_model, conf=conf).to(device)
