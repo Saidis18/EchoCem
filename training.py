@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 RUN_NUM = 2
-TESTING = True
+TESTING = False
 PRE_TRAIN = True
 
 try:
