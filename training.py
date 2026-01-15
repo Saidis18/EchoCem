@@ -7,7 +7,7 @@ from weights_loader import WeightsLoader
 from pathlib import Path
 
 
-RUN_NUM = 2
+RUN_NUM = 4
 TESTING = False
 PRE_TRAIN = True
 
