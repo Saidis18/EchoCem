@@ -139,7 +139,7 @@ class Segmentation(torch.nn.Module):
             total_loss += loss.detach()
         return total_loss / len(dataloader)
 
-    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device, logs: bool = False) -> float:
+    def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
         if self.conf.TEST_RATIO == 0.0:
             return 0.0
         self.eval()
@@ -150,13 +150,12 @@ class Segmentation(torch.nn.Module):
                 outputs = self(inputs)
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.detach()
-                if logs:
-                    try:
-                        plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
-                        plt.savefig(f"log/plot_{self.epoch_count}.png", dpi=300, bbox_inches="tight") # type: ignore
-                        plt.close()
-                    except:
-                        pass
+                try:
+                    plt.imshow(outputs.argmax(dim=1).squeeze().detach().cpu()[0]) # type: ignore
+                    plt.savefig(f"log/plot_{self.epoch_count}.png", dpi=300, bbox_inches="tight") # type: ignore
+                    plt.close()
+                except:
+                    pass
         return total_loss / len(dataloader)
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
