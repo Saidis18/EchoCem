@@ -65,6 +65,6 @@ class Benchmark:
 
 
 if __name__ == "__main__":
-    RUN_NUM = 2
+    RUN_NUM = 4
     benchmark = Benchmark(run_num=RUN_NUM)
     benchmark.run()
