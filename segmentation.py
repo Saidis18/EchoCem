@@ -35,7 +35,7 @@ class DownBlock(torch.nn.Module):
 class UpBlock(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
         super(UpBlock, self).__init__() # type: ignore
-        self.up = torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.up = torch.nn.Upsample(scale_factor=2, mode='bilinear')
         self.up_conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
         self.block = Block(out_channels * 2, out_channels)
     
