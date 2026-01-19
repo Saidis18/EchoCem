@@ -164,11 +164,13 @@ class Segmentation(torch.nn.Module):
                 out_name = f"log/pre_train_{self.epoch_count}.png"
             _, axarr = plt.subplots(2, 1) # type: ignore
             axarr[0].imshow(prediction)
-            axarr[1].imshow(targets.squeeze().detach().cpu()[idx])
+            axarr[1].imshow(targets.squeeze().clamp(min=0).detach().cpu()[idx])
             plt.savefig(out_name, dpi=300, bbox_inches="tight") # type: ignore
             plt.close()
         except:
             pass
+        finally:
+            plt.close('all')
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
         optimizer = torch.optim.Adam(self.parameters(), lr=7e-5)
