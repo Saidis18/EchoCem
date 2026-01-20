@@ -51,10 +51,9 @@ class EchoCementDataset(BaseDataset):
         label = np.array([v for v in labels if v != -1], dtype=np.int8).reshape(160, -1) # type: ignore
         image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
         label_out = torch.tensor(label, dtype=torch.long)
-        size = image_out.shape[2]
-        image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
+        image_out = torch.nn.functional.interpolate(image_out.unsqueeze(0), size=(160, 160), mode='bilinear', align_corners=False).squeeze(0)
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
-        label_out = torch.nn.functional.pad(label_out, (0, 272 - size), mode='constant', value=-100)
+        label_out = torch.nn.functional.interpolate(label_out.unsqueeze(0).unsqueeze(0).float(), size=(160, 160), mode='nearest').long().squeeze(0).squeeze(0)
         return image_out, label_out # type: ignore
 
 
@@ -77,8 +76,7 @@ class PreTrainingDataset(BaseDataset):
         image_path = self.all_files[idx]
         image = np.load(image_path)
         image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
-        size = image_out.shape[2]
-        image_out = torch.nn.functional.pad(image_out, (0, 272 - size), mode='constant', value=0)
+        image_out = torch.nn.functional.interpolate(image_out, size=(160, 160), mode='bilinear', align_corners=False)
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         
         # Create noisy version as label (image + Gaussian noise)
