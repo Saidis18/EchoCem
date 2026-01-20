@@ -173,7 +173,7 @@ class Segmentation(torch.nn.Module):
             plt.close('all')
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
-        optimizer = torch.optim.Adam(self.parameters(), lr=7e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         loss_fn = self.loss_fn
         for _ in range(epochs):
             init_time = time.time()

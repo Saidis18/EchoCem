@@ -80,12 +80,13 @@ class PreTrainingDataset(BaseDataset):
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         
         # Create noisy version as label (image + Gaussian noise)
-        noise = torch.randn_like(image_out)*0.1  # Standard deviation of 0.5
+        noise = torch.randn_like(image_out)*0.0  # Standard deviation
         noisy_image = (image_out + noise).clamp(0, 1)
 
-        hole_size = 32
+        hole_size = 40
         x = torch.randint(0, 160 - hole_size, (1,)).item()
-        y = torch.randint(0, 160 - hole_size, (1,)).item()
+        # Bias towards left side: y in range [0, 80] instead of [0, 128]
+        y = torch.randint(0, 80, (1,)).item()
         noisy_image[:, x:x+hole_size, y:y+hole_size] = 0
         
         return noisy_image, image_out # type: ignore
