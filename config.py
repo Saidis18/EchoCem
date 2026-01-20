@@ -14,7 +14,7 @@ class Config():
         DATA_DIR / "X_train_uDRk9z9" / "images",
         DATA_DIR / "X_unlabeled_mtkxUlo" / "images"
     ]
-    
+
     def __init__(
             self,
             loss_fn: torch.nn.Module,
@@ -53,8 +53,8 @@ std_configs = [
     ),
     Config(
         loss_fn=loss.DiceCELoss(),
-        features=[64, 128, 256],
-        epochs=30,
+        features=[64, 128, 256, 512],
+        epochs=60,
         batch_size_train=64,
         batch_size_val=128
     )
