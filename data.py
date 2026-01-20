@@ -80,8 +80,13 @@ class PreTrainingDataset(BaseDataset):
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         
         # Create noisy version as label (image + Gaussian noise)
-        noise = torch.randn_like(image_out)*0.4  # Standard deviation of 0.5
+        noise = torch.randn_like(image_out)*0.1  # Standard deviation of 0.5
         noisy_image = (image_out + noise).clamp(0, 1)
+
+        hole_size = 32
+        x = torch.randint(0, 160 - hole_size, (1,)).item()
+        y = torch.randint(0, 160 - hole_size, (1,)).item()
+        noisy_image[:, x:x+hole_size, y:y+hole_size] = 0
         
         return noisy_image, image_out # type: ignore
 
@@ -117,7 +122,7 @@ if __name__ == "__main__":
     DATA_DIR = Path(__file__).parent / "data"
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = Path(__file__).parent / "data" / "Y_test_2.csv"
+    Y_CSV = Path(__file__).parent / "runs" / "y_test_4.csv"
 
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
