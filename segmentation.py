@@ -5,6 +5,7 @@ import torch.utils.data
 import numpy as np
 import matplotlib.pyplot as plt
 import config
+import torchvision # type: ignore
 
 
 class Block(torch.nn.Module):
@@ -186,7 +187,7 @@ class Segmentation(torch.nn.Module):
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
         x = torch.tensor(img, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device) # type: ignore
-        x = (x - x.min()) / (x.max() - x.min())
+        x = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(x)
         with torch.no_grad():
             logits = self(x)
             predictions = logits.argmax(dim=1)
