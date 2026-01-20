@@ -40,7 +40,7 @@ class Augmentation:
         else:
             remove_batch = False
         
-        grid = torch.nn.functional.affine_grid(theta, img.shape, align_corners=False) # type: ignore
+        grid = torch.nn.functional.affine_grid(theta, img.shape) # type: ignore
         rotated = torch.nn.functional.grid_sample(img, grid, mode='nearest', padding_mode='zeros')
         
         if remove_batch:
