@@ -1,5 +1,5 @@
 import torch
-import torchvision  # type: ignore
+import math
 
 
 class RandomZeroedPatch:
@@ -21,11 +21,38 @@ class Augmentation:
         self.flip_vert = torch.rand(size=(1,), dtype=torch.float32).item() < 0.5
         self.rotation_angle = (torch.rand(size=(1,), dtype=torch.float32).item() * 2 * rot_angle) - rot_angle
 
+    def _rotate_tensor(self, img: torch.Tensor, angle: float) -> torch.Tensor:
+        """Rotate a tensor using affine transformation."""
+        angle_rad = math.radians(angle)
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+        
+        # Affine matrix for rotation around center
+        theta = torch.tensor([
+            [cos_a, -sin_a, 0],
+            [sin_a, cos_a, 0]
+        ], dtype=torch.float32).unsqueeze(0)
+        
+        # Add batch dimension if needed
+        if img.dim() == 3:
+            img = img.unsqueeze(0)
+            remove_batch = True
+        else:
+            remove_batch = False
+        
+        grid = torch.nn.functional.affine_grid(theta, img.shape, align_corners=False) # type: ignore
+        rotated = torch.nn.functional.grid_sample(img, grid, mode='nearest', padding_mode='zeros')
+        
+        if remove_batch:
+            rotated = rotated.squeeze(0)
+        
+        return rotated
+
     def __call__(self, img: torch.Tensor) -> torch.Tensor:
         img = torch.nn.functional.interpolate(img.unsqueeze(0), size=(160, 160), mode='nearest').squeeze(0)
         if self.flip_hori:
             img = torch.flip(img, dims=[2])
         if self.flip_vert:
             img = torch.flip(img, dims=[1])
-        img = torchvision.transforms.functional.rotate(img, self.rotation_angle) # type: ignore
+        img = self._rotate_tensor(img, self.rotation_angle)
         return img # type: ignore

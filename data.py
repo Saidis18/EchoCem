@@ -55,11 +55,9 @@ class EchoCementDataset(BaseDataset):
         aug = Augmentation()
         image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
         label = torch.tensor(label, dtype=torch.float32).unsqueeze(0)
-        print(f"Image shape before augmentation: {image.shape}, Label shape before augmentation: {label.shape}")
         image_out = aug(image)
         image_out = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(image_out)
         label_out = aug(label).squeeze(0).to(torch.long)
-        print(f"Image shape after augmentation: {image_out.shape}, Label shape after augmentation: {label_out.shape}")
         return image_out, label_out
 
 
