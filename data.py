@@ -116,8 +116,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     DATA_DIR = Path(__file__).parent / "data"
 
-    X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
-    Y_CSV = Path(__file__).parent / "data" / "Y_train_T9NrBYo.csv"
+    X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
+    Y_CSV = Path(__file__).parent / "data" / "Y_test_2.csv"
 
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
