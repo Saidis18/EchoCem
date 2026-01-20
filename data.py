@@ -5,6 +5,9 @@ import torch
 import torch.utils.data
 import time
 import config
+from PIL import Image
+import torchvision # type: ignore
+
 
 try:
     import polars as pl
@@ -15,6 +18,27 @@ except ImportError:
     HAS_POLARS = False # type: ignore
     print("Polars not found, falling back to Pandas")
 
+
+class Augmentation:
+    TRANSFORMATION = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Resize((160, 160)),
+        torchvision.transforms.RandomHorizontalFlip(p=0.5),
+        torchvision.transforms.RandomRotation(degrees=5),
+    ])
+
+    class RandomZeroedPatch:
+        """Creates a random zeroed patch of 40x40 on the image."""
+        def __init__(self, patch_size: int = 40):
+            self.patch_size = patch_size
+        
+        def __call__(self, img: torch.Tensor) -> torch.Tensor:
+            h, w = img.shape[-2:]
+            x = torch.randint(0, h - self.patch_size, (1,)).item()
+            y = torch.randint(0, w - self.patch_size, (1,)).item()
+            img = img.clone()
+            img[..., x:x+self.patch_size, y:y+self.patch_size] = 0
+            return img
 
 BaseSubset = torch.utils.data.Subset[torch.Tensor]
 class BaseDataset(torch.utils.data.Dataset[torch.Tensor]):
@@ -49,11 +73,13 @@ class EchoCementDataset(BaseDataset):
         else:
             labels = self.labels.iloc[idx] # type: ignore
         label = np.array([v for v in labels if v != -1], dtype=np.int8).reshape(160, -1) # type: ignore
-        image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
-        label_out = torch.tensor(label, dtype=torch.long)
-        image_out = torch.nn.functional.interpolate(image_out.unsqueeze(0), size=(160, 160), mode='bilinear', align_corners=False).squeeze(0)
-        image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
-        label_out = torch.nn.functional.interpolate(label_out.unsqueeze(0).unsqueeze(0).float(), size=(160, 160), mode='nearest').long().squeeze(0).squeeze(0)
+        image_pil = Image.fromarray(image)
+        label_pil = Image.fromarray(label)
+        state = torch.get_rng_state()
+        image_out = Augmentation.TRANSFORMATION(image_pil).to(torch.float32) # type: ignore
+        image_out = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(image_out) # type: ignore
+        torch.set_rng_state(state)
+        label_out = Augmentation.TRANSFORMATION(label_pil).to(torch.long).squeeze(0) # type: ignore
         return image_out, label_out # type: ignore
 
 
@@ -75,22 +101,11 @@ class PreTrainingDataset(BaseDataset):
         
         image_path = self.all_files[idx]
         image = np.load(image_path)
-        image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
-        image_out = torch.nn.functional.interpolate(image_out.unsqueeze(0), size=(160, 160), mode='bilinear', align_corners=False).squeeze(0)
-        image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
+        image_pil = Image.fromarray(image)
+        label_out = Augmentation.TRANSFORMATION(image_pil).to(torch.float32) # type: ignore
+        image_out = Augmentation.RandomZeroedPatch(patch_size=40)(label_out) # type: ignore
         
-        # Create noisy version as label (image + Gaussian noise)
-        noise = torch.randn_like(image_out)*0.0  # Standard deviation
-        noisy_image = (image_out + noise).clamp(0, 1)
-
-        hole_size = 40
-        x = torch.randint(0, 160 - hole_size, (1,)).item()
-        # Bias towards left side: y in range [0, 80] instead of [0, 128]
-        y = torch.randint(0, 80, (1,)).item()
-        noisy_image[:, x:x+hole_size, y:y+hole_size] = 0
-        
-        return noisy_image, image_out # type: ignore
-
+        return image_out, label_out.squeeze(0) # type: ignore
 
 class DataHandler():
     def __init__(self, dataset: BaseDataset | BaseSubset, conf: config.Config, testing: bool = False):
