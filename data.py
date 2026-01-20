@@ -104,15 +104,8 @@ class PreTrainingDataset(BaseDataset):
         image_pil = Image.fromarray(image)
         label_out = Augmentation.TRANSFORMATION(image_pil).to(torch.float32) # type: ignore
         image_out = Augmentation.RandomZeroedPatch(patch_size=40)(label_out) # type: ignore
-
-        label_out = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(label_out) # type: ignore
-        image_out = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(image_out) # type: ignore
-
-        label_out = torch.tensor(label_out, dtype=torch.float32).squeeze(0) # type: ignore
-        image_out = torch.tensor(image_out, dtype=torch.float32) # type: ignore
         
-        return image_out, label_out # type: ignore
-
+        return image_out, label_out.squeeze(0) # type: ignore
 
 class DataHandler():
     def __init__(self, dataset: BaseDataset | BaseSubset, conf: config.Config, testing: bool = False):
