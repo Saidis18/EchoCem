@@ -56,7 +56,7 @@ class EchoCementDataset(BaseDataset):
         image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
         label = torch.tensor(label, dtype=torch.float32).unsqueeze(0)
         image_out = aug(image)
-        image_out = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(image_out)
+        image_out = (image_out - image_out.mean()) / (image_out.std() + 1e-8)
         label_out = aug(label).squeeze(0).to(torch.long)
         return image_out, label_out
 
@@ -80,7 +80,7 @@ class PreTrainingDataset(BaseDataset):
         image_path = self.all_files[idx]
         image = np.load(image_path)
         image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
-        image = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(image)
+        image = (image - image.mean()) / (image.std() + 1e-8)
         aug = Augmentation()
         label_out = aug(image)
         image_out = RandomZeroedPatch(patch_size=40)(label_out)

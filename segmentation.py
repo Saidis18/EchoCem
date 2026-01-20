@@ -187,7 +187,7 @@ class Segmentation(torch.nn.Module):
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
         x = torch.tensor(img, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device) # type: ignore
-        x = torchvision.transforms.Normalize(mean=[0.0], std=[0.5])(x)
+        x = (x - x.mean()) / (x.std() + 1e-8)
         with torch.no_grad():
             logits = self(x)
             predictions = logits.argmax(dim=1)
