@@ -76,11 +76,11 @@ class PreTrainingDataset(BaseDataset):
         image_path = self.all_files[idx]
         image = np.load(image_path)
         image_out = torch.tensor(image, dtype=torch.float32).unsqueeze(dim=0)
-        image_out = torch.nn.functional.interpolate(image_out, size=(160, 160), mode='bilinear', align_corners=False)
+        image_out = torch.nn.functional.interpolate(image_out.unsqueeze(0), size=(160, 160), mode='bilinear', align_corners=False).squeeze(0)
         image_out = (image_out - image_out.min()) / (image_out.max() - image_out.min())
         
         # Create noisy version as label (image + Gaussian noise)
-        noise = torch.randn_like(image_out)*0.5  # Standard deviation of 0.5
+        noise = torch.randn_like(image_out)*0.4  # Standard deviation of 0.5
         noisy_image = (image_out + noise).clamp(0, 1)
         
         return noisy_image, image_out # type: ignore
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     DATA_DIR = Path(__file__).parent / "data"
 
-    X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = Path(__file__).parent / "runs" / 'y_test_2.csv'
+    X_DIR = DATA_DIR / "X_train_uDRk9z9" / "images"
+    Y_CSV = Path(__file__).parent / "data" / "Y_train_T9NrBYo.csv"
 
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
