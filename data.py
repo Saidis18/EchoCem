@@ -113,8 +113,8 @@ class DataHandler():
         if testing:
             dataset = torch.utils.data.Subset(dataset, list(range(32)))
         train_dataset, val_dataset = DataHandler.train_test_split(dataset, test_ratio=self.conf.TEST_RATIO)
-        self.train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True)
-        self.val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False)
+        self.train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True, num_workers=6)
+        self.val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False, num_workers=6)
 
     
     def get_loaders(self):
