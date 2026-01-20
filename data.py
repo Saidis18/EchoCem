@@ -21,10 +21,10 @@ except ImportError:
 
 class Augmentation:
     TRANSFORMATION = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
         torchvision.transforms.Resize((160, 160)),
         torchvision.transforms.RandomHorizontalFlip(p=0.5),
         torchvision.transforms.RandomRotation(degrees=5),
+        torchvision.transforms.ToTensor()
     ])
 
     class RandomZeroedPatch:
