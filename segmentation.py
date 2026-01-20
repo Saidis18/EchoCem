@@ -188,7 +188,9 @@ class Segmentation(torch.nn.Module):
         self.eval()
         x = torch.tensor(img, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device) # type: ignore
         x = (x - x.mean()) / (x.std() + 1e-8)
+        x = torch.nn.functional.interpolate(x, size=(160, 160), mode='nearest')
         with torch.no_grad():
             logits = self(x)
+            logits = torch.nn.functional.interpolate(logits, size=img.shape, mode='nearest')
             predictions = logits.argmax(dim=1)
         return predictions.cpu() # type: ignore
