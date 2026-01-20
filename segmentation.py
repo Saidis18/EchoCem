@@ -191,6 +191,6 @@ class Segmentation(torch.nn.Module):
         x = torch.nn.functional.interpolate(x, size=(160, 160), mode='nearest')
         with torch.no_grad():
             logits = self(x)
-            logits = torch.nn.functional.interpolate(logits, size=img.shape, mode='nearest')
+            logits = torch.nn.functional.interpolate(logits, size=img.shape, mode='bilinear')
             predictions = logits.argmax(dim=1)
         return predictions.cpu() # type: ignore
