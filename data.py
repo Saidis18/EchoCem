@@ -105,7 +105,7 @@ class PreTrainingDataset(BaseDataset):
         label_out = Augmentation.TRANSFORMATION(image_pil).to(torch.float32) # type: ignore
         image_out = Augmentation.RandomZeroedPatch(patch_size=40)(label_out) # type: ignore
         
-        return image_out, label_out.squeeze(0) # type: ignore
+        return image_out, label_out # type: ignore
 
 class DataHandler():
     def __init__(self, dataset: BaseDataset | BaseSubset, conf: config.Config, testing: bool = False):
