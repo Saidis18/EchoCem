@@ -21,6 +21,32 @@ class Block(torch.nn.Module):
         return x
 
 
+class AttentionGate(torch.nn.Module):
+    def __init__(self, F_g: int, F_l: int, F_int: int):
+        super(AttentionGate, self).__init__() # type: ignore
+        self.W_g = torch.nn.Sequential(
+            torch.nn.Conv2d(F_g, F_int, kernel_size=1, stride=1, padding=0, bias=True),
+            torch.nn.BatchNorm2d(F_int)
+        )
+        self.W_x = torch.nn.Sequential(
+            torch.nn.Conv2d(F_l, F_int, kernel_size=1, stride=1, padding=0, bias=True),
+            torch.nn.BatchNorm2d(F_int)
+        )
+        self.psi = torch.nn.Sequential(
+            torch.nn.Conv2d(F_int, 1, kernel_size=1, stride=1, padding=0, bias=True),
+            torch.nn.BatchNorm2d(1),
+            torch.nn.Sigmoid()
+        )
+        self.relu = torch.nn.ReLU(inplace=True)
+    
+    def forward(self, g: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        g1 = self.W_g(g)
+        x1 = self.W_x(x)
+        psi = self.relu(g1 + x1)
+        psi = self.psi(psi)
+        return x * psi
+
+
 class DownBlock(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
         super(DownBlock, self).__init__() # type: ignore
@@ -38,11 +64,13 @@ class UpBlock(torch.nn.Module):
         super(UpBlock, self).__init__() # type: ignore
         self.up = torch.nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.up_conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+        self.attention = AttentionGate(F_g=out_channels, F_l=out_channels, F_int=out_channels // 2)
         self.block = Block(out_channels * 2, out_channels)
     
     def forward(self, x: torch.Tensor, skip_connection: torch.Tensor) -> torch.Tensor:
         x = self.up(x)
         x = self.up_conv(x)
+        skip_connection = self.attention(g=x, x=skip_connection)
         x = torch.cat((x, skip_connection), dim=1)
         x = self.block(x)
         return x
