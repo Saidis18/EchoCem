@@ -203,7 +203,7 @@ class Segmentation(torch.nn.Module):
             plt.close('all')
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
-        optimizer = torch.optim.Adam(self.parameters(), lr=5e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=2e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
         loss_fn = self.loss_fn
         for _ in range(epochs):
