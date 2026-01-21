@@ -8,7 +8,7 @@ class Config():
     DATA_DIR = pathlib.Path(__file__).parent / "data"
     RUNS_DIR = pathlib.Path(__file__).parent / "runs"
     X_TEST_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    TEST_RATIO = 0.2
+    TEST_RATIO = 0.005
     PRETRAINING_PATHS: List[pathlib.Path] = [
         DATA_DIR / "X_test_xNbnvIa" / "images",
         DATA_DIR / "X_train_uDRk9z9" / "images",
@@ -54,8 +54,8 @@ std_configs = [
     Config(
         loss_fn=loss.DiceCELoss(),
         features=[64, 128, 256, 512],
-        epochs=20,
-        batch_size_train=64,
-        batch_size_val=128
+        epochs=100,
+        batch_size_train=128,
+        batch_size_val=32
     )
 ]
