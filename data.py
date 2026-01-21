@@ -113,7 +113,7 @@ class DataHandler():
 
 
 class RandomZeroedPatch:
-        def __init__(self, patch_size: int = 50):
+        def __init__(self, patch_size: int = 64):
             self.patch_size = patch_size
         
         def __call__(self, img: torch.Tensor) -> torch.Tensor:
