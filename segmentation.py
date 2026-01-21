@@ -175,14 +175,16 @@ class Segmentation(torch.nn.Module):
             plt.close('all')
     
     def training_loop(self, train_dataloader: _dataloader_t, val_dataloader: _dataloader_t, epochs: int, device: torch.device) -> None:
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=5e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
         loss_fn = self.loss_fn
         for _ in range(epochs):
             init_time = time.time()
             train_loss = self.epoch(train_dataloader, optimizer, loss_fn, device)
             val_loss = self.validate(val_dataloader, loss_fn, device)
+            scheduler.step()
             end_time = time.time()
-            print(f"Epoch {self.epoch_count}/{self.conf.epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s")
+            print(f"Epoch {self.epoch_count}/{self.conf.epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s, LR: {scheduler.get_last_lr()[0]:.6f}")
 
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
