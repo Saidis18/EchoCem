@@ -212,7 +212,7 @@ class Segmentation(torch.nn.Module):
             val_loss = self.validate(val_dataloader, loss_fn, device)
             scheduler.step()
             end_time = time.time()
-            print(f"Epoch {self.epoch_count}/{self.conf.epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s, LR: {scheduler.get_last_lr()[0]:.6f}")
+            print(f"Epoch {self.epoch_count}/{self.conf.epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Time: {end_time - init_time:.2f}s, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
     def predict(self, img: np.ndarray, device: torch.device) -> torch.Tensor:
         self.eval()
