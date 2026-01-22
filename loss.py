@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+from scipy import ndimage as ndi  # type: ignore
 
 
 class DiceCELoss(torch.nn.Module):
@@ -57,37 +59,54 @@ class TVCELoss(torch.nn.Module):
 
 
 class BoundaryLoss(torch.nn.Module):
-    """GPU-friendly boundary loss.
+    """Boundary loss based on signed distance maps (SciPy EDT).
 
-    This implementation avoids CPU distance transforms (SciPy/NumPy) and instead
-    matches predicted vs target boundaries using a morphological gradient and a
-    Dice-style overlap loss.
+    This follows the idea from:
+        Kervadec et al., "Boundary loss for highly unbalanced segmentation".
+
+    Notes:
+    - This implementation is CPU-bound because SciPy's distance transform runs on CPU.
+    - It is mathematically closer to the paper than edge-only surrogates.
     """
-    def __init__(
-        self,
-        ignore_index: int = -100,
-        kernel_size: int = 3,
-        smooth: float = 1e-6,
-        reduction: str = "mean",
-    ):
+    def __init__(self, ignore_index: int = -100, reduction: str = "mean"):
         super(BoundaryLoss, self).__init__() # type: ignore
         self.ignore_index = ignore_index
-        self.kernel_size = kernel_size
-        self.smooth = smooth
         self.reduction = reduction
 
-    def _morphological_gradient(self, x: torch.Tensor) -> torch.Tensor:
-        """Morphological gradient (dilation - erosion) with min/max pooling."""
-        k = int(self.kernel_size)
-        if k < 1 or k % 2 == 0:
-            raise ValueError("kernel_size must be an odd integer >= 1")
-        if k == 1:
-            return torch.zeros_like(x)
+    def _signed_distance(self, mask: np.ndarray) -> np.ndarray:
+        mask = mask.astype(bool)
+        if mask.any():
+            posmask = mask
+            negmask = ~posmask
+            dist_out: np.ndarray = ndi.distance_transform_edt(negmask)  # type: ignore[union-attr]
+            dist_in: np.ndarray = ndi.distance_transform_edt(posmask)  # type: ignore[union-attr]
+            signed = dist_out - dist_in
+        else:
+            signed = np.zeros_like(mask, dtype=np.float32)
+        return signed.astype(np.float32)
 
-        pad = k // 2
-        dil = torch.nn.functional.max_pool2d(x, kernel_size=k, stride=1, padding=pad)
-        ero = -torch.nn.functional.max_pool2d(-x, kernel_size=k, stride=1, padding=pad)
-        return (dil - ero).clamp_min(0.0)
+    def _compute_distance_maps(
+        self,
+        targets: torch.Tensor,
+        valid_mask: torch.Tensor,
+        num_classes: int,
+        device: torch.device,
+    ) -> torch.Tensor:
+        targets_cpu = targets.detach().cpu().numpy()
+        valid_cpu = (valid_mask.detach().cpu().numpy() != 0)
+        batch_size, height, width = targets_cpu.shape
+        dist_maps = np.zeros((batch_size, num_classes, height, width), dtype=np.float32)
+
+        for b in range(batch_size):
+            if not valid_cpu[b].any():
+                continue
+            for c in range(num_classes):
+                class_mask = (targets_cpu[b] == c) & valid_cpu[b]
+                dist_map = self._signed_distance(class_mask)
+                dist_map[~valid_cpu[b]] = 0.0
+                dist_maps[b, c] = dist_map
+
+        return torch.from_numpy(dist_maps).to(device)  # type: ignore[reportUnknownMemberType]
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         if inputs.dim() != 4:
@@ -99,31 +118,22 @@ class BoundaryLoss(torch.nn.Module):
         probs = torch.nn.functional.softmax(inputs, dim=1)
 
         valid_mask = (targets != self.ignore_index) & (targets >= 0) & (targets < num_classes)
-        valid_mask_f = valid_mask.unsqueeze(1).to(dtype=probs.dtype)
-
-        # Safe one-hot encoding for targets
         targets_safe = targets.clone()
-        targets_safe[~valid_mask] = 0
-        target_1h = torch.nn.functional.one_hot(targets_safe, num_classes=num_classes).permute(0, 3, 1, 2).to(dtype=probs.dtype)
-        target_1h = target_1h * valid_mask_f
+        targets_safe[valid_mask == 0] = 0
 
         with torch.no_grad():
-            target_boundary = self._morphological_gradient(target_1h)
+            dist_maps = self._compute_distance_maps(targets_safe, valid_mask, num_classes, inputs.device)
 
-        pred_boundary = self._morphological_gradient(probs) * valid_mask_f
+        valid_mask_f = valid_mask.unsqueeze(1).to(dtype=probs.dtype)
+        loss = (probs * dist_maps * valid_mask_f).sum()
 
-        # Boundary Dice loss (global over batch/classes/pixels)
-        intersection = torch.sum(pred_boundary * target_boundary)
-        cardinality = torch.sum(pred_boundary) + torch.sum(target_boundary)
-        dice = (2.0 * intersection + self.smooth) / (cardinality + self.smooth)
-        loss = 1.0 - dice
-
-        if self.reduction == "none":
-            return (pred_boundary - target_boundary).abs()
         if self.reduction == "sum":
-            # Keep historical meaning: scale by number of valid pixels
-            return loss * (valid_mask_f.sum() + 1e-8)
-        return loss
+            return loss
+        if self.reduction == "none":
+            return probs * dist_maps * valid_mask_f
+
+        denom = valid_mask_f.sum()
+        return loss / (denom + 1e-8)
 
 
 class DiceBoundCELoss(torch.nn.Module):
