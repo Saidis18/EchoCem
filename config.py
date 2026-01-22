@@ -57,5 +57,12 @@ std_configs = [
         epochs=150,
         batch_size_train=128,
         batch_size_val=32
+    ),
+    Config(
+        loss_fn=loss.DiceBoundCELoss(),
+        features=[64, 128, 256, 512],
+        epochs=150,
+        batch_size_train=128,
+        batch_size_val=32
     )
 ]
