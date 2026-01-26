@@ -95,18 +95,20 @@ class Encoder(torch.nn.Module):
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, features: List[int], dims_up: List[Tuple[int, int]]):
+    def __init__(self, features: List[int], out_channels: int, dims_up: List[Tuple[int, int]]):
         super(Decoder, self).__init__() # type: ignore
 
         self.up_blocks = torch.nn.ModuleList([UpBlock(in_ch, out_ch) for in_ch, out_ch in dims_up])
+        self.supervision = torch.nn.ModuleList([torch.nn.Conv2d(out_ch, out_channels, kernel_size=1) for _, out_ch in dims_up])
         self.last_up = UpBlock(features[0] * 2, features[0])
     
-    def forward(self, x: torch.Tensor, skip_connections: List[torch.Tensor]) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, skip_connections: List[torch.Tensor]) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        supervised_outputs: List[torch.Tensor] = []
         for idx, up in enumerate(self.up_blocks):
             x = up(x, skip_connections[idx])
+            supervised_outputs.append(self.supervision[idx](x))
         x = self.last_up(x, skip_connections[-1])
-        return x
-
+        return x, supervised_outputs
 
 class UNet(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, features: List[int]):
@@ -114,14 +116,14 @@ class UNet(torch.nn.Module):
         dims_down, dims_up = UNet._get_dims(features)
 
         self.encoder = Encoder(in_channels, features, dims_down)
-        self.decoder = Decoder(features, dims_up)
+        self.decoder = Decoder(features, out_channels, dims_up)
         self.final_conv = torch.nn.Conv2d(features[0], out_channels, kernel_size=1)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         x, skip_connections = self.encoder(x)
-        x = self.decoder(x, skip_connections)
+        x, supervised_outputs = self.decoder(x, skip_connections)
         x = self.final_conv(x)
-        return x
+        return x, supervised_outputs
     
     _dims_t = List[Tuple[int, int]]
     @staticmethod
@@ -161,8 +163,11 @@ class Segmentation(torch.nn.Module):
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
-            outputs = self(inputs)
+            outputs, supervised_outputs = self(inputs)
             loss = loss_fn(outputs, targets)
+            for i, sup_out in enumerate(supervised_outputs):
+                downsampled_target = torch.nn.functional.interpolate(targets.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().long()    
+                loss += loss_fn(sup_out, downsampled_target) / (2 ** (i + 1))
             loss.backward()
             optimizer.step()
             total_loss += loss.detach()
@@ -176,7 +181,7 @@ class Segmentation(torch.nn.Module):
         with torch.no_grad():
             for inputs, targets in dataloader:
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs = self(inputs)
+                outputs, _ = self(inputs)
                 loss = loss_fn(outputs, targets)
                 total_loss += loss.detach()
                 self.log_image(inputs, outputs, targets)
@@ -220,7 +225,7 @@ class Segmentation(torch.nn.Module):
         x = (x - x.mean()) / (x.std() + 1e-8)
         x = torch.nn.functional.interpolate(x, size=(160, 160), mode='nearest')
         with torch.no_grad():
-            logits = self(x)
+            logits, _ = self(x)
             logits = torch.nn.functional.interpolate(logits, size=img.shape, mode='bilinear')
             predictions = logits.argmax(dim=1)
         return predictions.cpu() # type: ignore
