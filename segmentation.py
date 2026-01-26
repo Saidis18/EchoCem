@@ -166,7 +166,7 @@ class Segmentation(torch.nn.Module):
             outputs, supervised_outputs = self(inputs)
             loss = loss_fn(outputs, targets)
             for i, sup_out in enumerate(supervised_outputs):
-                downsampled_target = torch.nn.functional.interpolate(targets.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().long()    
+                downsampled_target = torch.nn.functional.interpolate(targets.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().to(targets.dtype)
                 loss += loss_fn(sup_out, downsampled_target) / (4 ** i)
             loss.backward()
             optimizer.step()
