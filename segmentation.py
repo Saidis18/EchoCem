@@ -103,12 +103,12 @@ class Decoder(torch.nn.Module):
         self.last_up = UpBlock(features[0] * 2, features[0])
     
     def forward(self, x: torch.Tensor, skip_connections: List[torch.Tensor]) -> Tuple[torch.Tensor, List[torch.Tensor]]:
-        supervised_outputs: List[torch.Tensor] = []
+        supervised_latents: List[torch.Tensor] = []
         for idx, up in enumerate(self.up_blocks):
             x = up(x, skip_connections[idx])
-            supervised_outputs.append(self.supervision[idx](x))
+            supervised_latents.append(self.supervision[idx](x))
         x = self.last_up(x, skip_connections[-1])
-        return x, supervised_outputs
+        return x, supervised_latents
 
 class UNet(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, features: List[int]):
@@ -121,9 +121,9 @@ class UNet(torch.nn.Module):
     
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         x, skip_connections = self.encoder(x)
-        x, supervised_outputs = self.decoder(x, skip_connections)
+        x, supervised_latents = self.decoder(x, skip_connections)
         x = self.final_conv(x)
-        return x, supervised_outputs[::-1]
+        return x, supervised_latents[::-1]
     
     _dims_t = List[Tuple[int, int]]
     @staticmethod
@@ -163,17 +163,17 @@ class Segmentation(torch.nn.Module):
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
-            outputs, supervised_outputs = self(inputs)
+            outputs, supervised_latents = self(inputs)
             loss = loss_fn(outputs, targets)
-            loss += self.downsample_loss(supervised_outputs, targets, loss_fn)
+            loss += self.downsample_loss(supervised_latents, targets, loss_fn)
             loss.backward()
             optimizer.step()
             total_loss += loss.detach()
         return total_loss / len(dataloader)
     
-    def downsample_loss(self, supervised_outputs: List[torch.Tensor], targets: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+    def downsample_loss(self, supervised_latents: List[torch.Tensor], targets: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
         loss = torch.tensor(0.0).to(targets.device)
-        for i, sup_out in enumerate(supervised_outputs):
+        for i, sup_out in enumerate(supervised_latents):
             if targets.shape[1] == 1:
                 targets_for_interp = targets.float()
             else:
