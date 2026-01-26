@@ -83,9 +83,10 @@ class PreTrainingDataset(BaseDataset):
         image = (image - image.mean()) / (image.std() + 1e-8)
         aug = Augmentation()
         label_out = aug(image)
-        image_out = RandomZeroedPatch(patch_size=40)(label_out)
+        image_out = RandomZeroedPatch(patch_size=80)(label_out)
         
         return image_out, label_out
+
 
 class DataHandler():
     def __init__(self, dataset: BaseDataset | BaseSubset, conf: config.Config, testing: bool = False):
@@ -95,7 +96,6 @@ class DataHandler():
         train_dataset, val_dataset = DataHandler.train_test_split(dataset, test_ratio=self.conf.TEST_RATIO)
         self.train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.conf.batch_size_train, shuffle=True, num_workers=6)
         self.val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.conf.batch_size_val, shuffle=False, num_workers=6)
-
     
     def get_loaders(self):
         return self.train_loader, self.val_loader
@@ -113,7 +113,7 @@ class DataHandler():
 
 
 class RandomZeroedPatch:
-        def __init__(self, patch_size: int = 64):
+        def __init__(self, patch_size: int):
             self.patch_size = patch_size
         
         def __call__(self, img: torch.Tensor) -> torch.Tensor:
@@ -126,8 +126,8 @@ class RandomZeroedPatch:
 
 
 class Augmentation:
-    def __init__(self, rot_angle: float=5.0):
-        self.flip_hori = torch.rand(size=(1,), dtype=torch.float32).item() < 0.5
+    def __init__(self, rot_angle: float=7.0):
+        self.flip_hori = torch.rand(size=(1,), dtype=torch.float32).item() < 0.1
         self.flip_vert = torch.rand(size=(1,), dtype=torch.float32).item() < 0.5
         self.rotation_angle = (torch.rand(size=(1,), dtype=torch.float32).item() * 2 * rot_angle) - rot_angle
 

@@ -123,7 +123,7 @@ class UNet(torch.nn.Module):
         x, skip_connections = self.encoder(x)
         x, supervised_outputs = self.decoder(x, skip_connections)
         x = self.final_conv(x)
-        return x, supervised_outputs
+        return x, supervised_outputs[::-1]
     
     _dims_t = List[Tuple[int, int]]
     @staticmethod
@@ -167,7 +167,7 @@ class Segmentation(torch.nn.Module):
             loss = loss_fn(outputs, targets)
             for i, sup_out in enumerate(supervised_outputs):
                 downsampled_target = torch.nn.functional.interpolate(targets.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().long()    
-                loss += loss_fn(sup_out, downsampled_target) / (2 ** (i + 1))
+                loss += loss_fn(sup_out, downsampled_target) / (4 ** i)
             loss.backward()
             optimizer.step()
             total_loss += loss.detach()
