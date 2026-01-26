@@ -164,9 +164,14 @@ class Segmentation(torch.nn.Module):
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
             outputs, supervised_outputs = self(inputs)
-            loss = loss_fn(outputs, targets)
+            # Ensure targets have the correct shape for loss computation
+            if targets.dim() == 2:
+                targets_for_loss = targets.unsqueeze(1)
+            else:
+                targets_for_loss = targets
+            loss = loss_fn(outputs, targets_for_loss)
             for i, sup_out in enumerate(supervised_outputs):
-                downsampled_target = torch.nn.functional.interpolate(targets.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().to(targets.dtype)
+                downsampled_target = torch.nn.functional.interpolate(targets_for_loss.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().to(targets.dtype)
                 loss += loss_fn(sup_out, downsampled_target) / (4 ** i)
             loss.backward()
             optimizer.step()
@@ -182,7 +187,12 @@ class Segmentation(torch.nn.Module):
             for inputs, targets in dataloader:
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs, _ = self(inputs)
-                loss = loss_fn(outputs, targets)
+                # Ensure targets have the correct shape for loss computation
+                if targets.dim() == 2:
+                    targets_for_loss = targets.unsqueeze(1)
+                else:
+                    targets_for_loss = targets
+                loss = loss_fn(outputs, targets_for_loss)
                 total_loss += loss.detach()
                 self.log_image(inputs, outputs, targets)
         return total_loss / len(dataloader)
