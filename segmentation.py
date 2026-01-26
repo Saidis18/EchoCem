@@ -164,19 +164,25 @@ class Segmentation(torch.nn.Module):
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
             outputs, supervised_outputs = self(inputs)
-            # Ensure targets have the correct shape for loss computation
-            if targets.dim() == 2:
-                targets_for_loss = targets.unsqueeze(1)
-            else:
-                targets_for_loss = targets
-            loss = loss_fn(outputs, targets_for_loss)
-            for i, sup_out in enumerate(supervised_outputs):
-                downsampled_target = torch.nn.functional.interpolate(targets_for_loss.unsqueeze(1).float(), size=sup_out.shape[2:], mode='nearest').squeeze(1).round().to(targets.dtype)
-                loss += loss_fn(sup_out, downsampled_target) / (4 ** i)
+            loss = loss_fn(outputs, targets)
+            loss += self.downsample_loss(supervised_outputs, targets, loss_fn)
             loss.backward()
             optimizer.step()
             total_loss += loss.detach()
         return total_loss / len(dataloader)
+    
+    def downsample_loss(self, supervised_outputs: List[torch.Tensor], targets: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+        loss = torch.tensor(0.0).to(targets.device)
+        for i, sup_out in enumerate(supervised_outputs):
+            if targets.shape[1] == 1:
+                targets_for_interp = targets.float()
+            else:
+                targets_for_interp = targets.unsqueeze(1).float()
+            downsampled_target = torch.nn.functional.interpolate(targets_for_interp, size=sup_out.shape[2:], mode='nearest').squeeze(1).round().to(targets.dtype)
+            if sup_out.shape[1] == 1:
+                sup_out = sup_out.squeeze(1)
+            loss += loss_fn(sup_out, downsampled_target) / (4 ** i)
+        return loss
 
     def validate(self, dataloader: _dataloader_t, loss_fn: torch.nn.Module, device: torch.device) -> float:
         if self.conf.TEST_RATIO == 0.0:

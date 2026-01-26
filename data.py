@@ -85,7 +85,7 @@ class PreTrainingDataset(BaseDataset):
         label_out = aug(image)
         image_out = RandomZeroedPatch(patch_size=80)(label_out)
         
-        return image_out, label_out.squeeze(0)
+        return image_out, label_out
 
 
 class DataHandler():
