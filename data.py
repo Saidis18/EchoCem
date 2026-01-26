@@ -85,7 +85,7 @@ class PreTrainingDataset(BaseDataset):
         label_out = aug(image)
         image_out = RandomZeroedPatch(patch_size=80)(label_out)
         
-        return image_out, label_out
+        return image_out, label_out.squeeze(0)
 
 
 class DataHandler():
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     DATA_DIR = Path(__file__).parent / "data"
 
     X_DIR = DATA_DIR / "X_test_xNbnvIa" / "images"
-    Y_CSV = Path(__file__).parent / "runs" / "y_test_4.csv"
+    Y_CSV = Path(__file__).parent / "runs" / "y_test_5.csv"
 
     dataset = EchoCementDataset(X_DIR, Y_CSV)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
