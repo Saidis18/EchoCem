@@ -55,9 +55,9 @@ class EchoCementDataset(BaseDataset):
         aug = Augmentation()
         image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
         label = torch.tensor(label, dtype=torch.float32).unsqueeze(0)
-        image_out = aug(image)
-        image_out = (image_out - image_out.mean()) / (image_out.std() + 1e-8)
-        label_out = aug(label).squeeze(0).to(torch.long)
+        image = (image - image.mean()) / (image.std() + 1e-8)
+        image_out = aug(image, degrade=True)
+        label_out = aug(label, degrade=False).squeeze(0).to(torch.long)
         return image_out, label_out
 
 
@@ -82,8 +82,9 @@ class PreTrainingDataset(BaseDataset):
         image = torch.tensor(image, dtype=torch.float32).unsqueeze(0)
         image = (image - image.mean()) / (image.std() + 1e-8)
         aug = Augmentation()
-        label_out = aug(image)
-        image_out = RandomZeroedPatch(patch_size=80)(label_out)
+        label_out = aug(image, degrade=False)
+        image_out = aug(image, degrade=True)
+        image_out = RandomZeroedPatch(patch_size=80)(image_out)
         
         return image_out, label_out
 
@@ -130,7 +131,10 @@ class Augmentation:
         self.flip_hori = torch.rand(size=(1,), dtype=torch.float32).item() < 0.1
         self.flip_vert = torch.rand(size=(1,), dtype=torch.float32).item() < 0.5
         self.rotation_angle = (torch.rand(size=(1,), dtype=torch.float32).item() * 2 * rot_angle) - rot_angle
-
+        self.noise = torch.randn(size=(160, 160), dtype=torch.float32) * 0.8
+        self.contrast_factor = 1.0 + torch.randn(size=(1,), dtype=torch.float32).item() * 0.5
+        self.scale_factor = 1.0 - 0.5 * torch.rand(size=(1,), dtype=torch.float32).item()
+    
     def _rotate_tensor(self, img: torch.Tensor, angle: float) -> torch.Tensor:
         """Rotate a tensor using affine transformation."""
         angle_rad = math.radians(angle)
@@ -158,13 +162,20 @@ class Augmentation:
         
         return rotated
 
-    def __call__(self, img: torch.Tensor) -> torch.Tensor:
+    def __call__(self, img: torch.Tensor, degrade: bool) -> torch.Tensor:
+        scaled_size = int(160 * self.scale_factor)
+        img = img[..., :scaled_size, :scaled_size]
         img = torch.nn.functional.interpolate(img.unsqueeze(0), size=(160, 160), mode='nearest').squeeze(0)
+        
         if self.flip_hori:
             img = torch.flip(img, dims=[2])
         if self.flip_vert:
             img = torch.flip(img, dims=[1])
         img = self._rotate_tensor(img, self.rotation_angle)
+        if degrade:
+            mean = img.mean()
+            img = (img - mean) * self.contrast_factor + mean
+            img = img + self.noise.unsqueeze(0)
         return img # type: ignore
 
 
